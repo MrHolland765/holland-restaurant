@@ -1,772 +1,1697 @@
-import React, { useState } from 'react';
-import { useRestaurant } from '../../context/RestaurantContext';
-import { useToast } from '../../context/ToastContext';
-import { FoodImage } from '../common/FoodImage';
+import React, {
+  useEffect,
+  useState,
+} from 'react';
+
 import {
-  Shield,
-  ChefHat,
-  Bike,
-  DollarSign,
   Plus,
-  Trash2,
-  Edit2,
-  CheckCircle2,
-  Clock,
   Search,
-  Phone,
-  MapPin,
-  UtensilsCrossed,
+  Edit,
+  Trash2,
   Package,
-  TrendingUp,
+  ShoppingBag,
+  Users,
+  Truck,
   X,
+  CheckCircle,
+  Clock,
+  Eye,
 } from 'lucide-react';
 
-export const AdminDashboard = () => {
+import { useRestaurant } from "../../context/RestaurantContext";
+
+import {
+  createDeliveryStaff,
+  deleteDeliveryStaff,
+} from "../../API";
+
+const AdminDashboard = () => {
+
   const {
-    orders,
     menuItems,
+    orders,
     deliveryStaff,
-    updateOrderStatus,
-    assignOrderToStaff,
-    cancelOrder,
+    refreshDeliveryStaff,
     addMenuItem,
     updateMenuItem,
     deleteMenuItem,
     toggleStock,
+    assignOrderToStaff,
   } = useRestaurant();
-  const { showToast } = useToast();
 
-  const [adminTab, setAdminTab] = useState('orders'); // 'orders' | 'menu' | 'riders' | 'reports'
-  const [orderFilter, setOrderFilter] = useState('All');
-  const [menuFilter, setMenuFilter] = useState('All');
 
-  // Menu item modal state
-  const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
-  const [menuForm, setMenuForm] = useState({
-    name: '',
-    category: 'Foods',
-    price: '',
-    prepTime: '15 mins',
-    image: '',
-    description: '',
-  });
+  // ===============================
+  // STATES
+  // ===============================
 
-  // Rider assignment modal state
-  const [assigningOrder, setAssigningOrder] = useState(null);
-  const [selectedStaffId, setSelectedStaffId] = useState(deliveryStaff[0]?.id || '');
+  const [activeTab, setActiveTab] =
+    useState('dashboard');
 
-  const formatTsh = (val) => Number(val || 0).toLocaleString('en-US');
+  const [searchQuery, setSearchQuery] =
+    useState('');
 
-  // Metrics
-  const totalRevenue = orders
-    .filter((o) => o.status !== 'Cancelled')
-    .reduce((sum, o) => sum + o.total, 0);
-  const pendingOrders = orders.filter((o) => o.status === 'Pending').length;
-  const preparingOrders = orders.filter((o) => o.status === 'Preparing').length;
-  const outForDelivery = orders.filter((o) => o.status === 'Out for Delivery').length;
-  const deliveredCount = orders.filter((o) => o.status === 'Delivered').length;
+  const [selectedOrder, setSelectedOrder] =
+    useState(null);
 
-  const filteredOrders = orders.filter((o) => {
-    if (orderFilter === 'All') return true;
-    return o.status.toLowerCase() === orderFilter.toLowerCase();
-  });
+  const [selectedStaffId, setSelectedStaffId] =
+    useState('');
 
-  const filteredMenuItems = menuItems.filter((i) => {
-    if (menuFilter === 'All') return true;
-    return i.category.toLowerCase() === menuFilter.toLowerCase();
-  });
+  const [isDeliveryModalOpen, setIsDeliveryModalOpen] =
+    useState(false);
+
+  const [isMenuModalOpen, setIsMenuModalOpen] =
+    useState(false);
+
+  const [editingMenuItem, setEditingMenuItem] =
+    useState(null);
+
+  const [toast, setToast] =
+    useState(null);
+
+
+  // ===============================
+  // DELIVERY FORM
+  // ===============================
+
+  const [deliveryForm, setDeliveryForm] =
+    useState({
+      full_name: '',
+      email: '',
+      phone: '',
+      address: '',
+      password: '',
+    });
+
+
+  // ===============================
+  // MENU FORM
+  // ===============================
+
+  const [menuForm, setMenuForm] =
+    useState({
+      name: '',
+      description: '',
+      price: '',
+      category: 'Foods',
+      image: '',
+      prepTime: '15-20 min',
+      inStock: true,
+    });
+
+
+  // ===============================
+  // SELECT FIRST DELIVERY STAFF
+  // ===============================
+
+  useEffect(() => {
+    if (
+      !selectedStaffId &&
+      deliveryStaff.length > 0
+    ) {
+      setSelectedStaffId(
+        deliveryStaff[0].id
+      );
+    }
+  }, [
+    deliveryStaff,
+    selectedStaffId,
+  ]);
+
+
+  // ===============================
+  // TOAST
+  // ===============================
+
+  const showToast = (
+    message,
+    type = 'success'
+  ) => {
+    setToast({
+      message,
+      type,
+    });
+
+    setTimeout(() => {
+      setToast(null);
+    }, 3000);
+  };
+
+
+  // ===============================
+  // ADD DELIVERY ACCOUNT
+  // ===============================
+
+  const handleAddDelivery = async (
+    e
+  ) => {
+    e.preventDefault();
+
+    try {
+
+      if (
+        !deliveryForm.full_name ||
+        !deliveryForm.email ||
+        !deliveryForm.password
+      ) {
+        showToast(
+          'Jina, email na password vinahitajika',
+          'error'
+        );
+        return;
+      }
+
+
+      if (
+        deliveryForm.password.length < 6
+      ) {
+        showToast(
+          'Password lazima iwe na angalau herufi 6',
+          'error'
+        );
+        return;
+      }
+
+
+      await createDeliveryStaff({
+        full_name:
+          deliveryForm.full_name,
+
+        email:
+          deliveryForm.email,
+
+        password:
+          deliveryForm.password,
+
+        phone:
+          deliveryForm.phone,
+
+        address:
+          deliveryForm.address,
+      });
+
+
+      await refreshDeliveryStaff();
+
+
+      showToast(
+        'Delivery account imetengenezwa successfully!',
+        'success'
+      );
+
+
+      setDeliveryForm({
+        full_name: '',
+        email: '',
+        phone: '',
+        address: '',
+        password: '',
+      });
+
+
+      setIsDeliveryModalOpen(false);
+
+    } catch (error) {
+
+      console.error(
+        'CREATE DELIVERY ERROR:',
+        error
+      );
+
+      showToast(
+        error.message ||
+          'Imeshindikana kutengeneza account',
+        'error'
+      );
+    }
+  };
+
+  // ===============================
+// DELETE DELIVERY STAFF
+// ===============================
+
+const handleDeleteDelivery = async (id) => {
+  const confirmed = window.confirm(
+    "Una uhakika unataka kufuta Delivery Staff huyu?"
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await deleteDeliveryStaff(id);
+
+    await refreshDeliveryStaff();
+
+    showToast(
+      "Delivery account imefutwa successfully!",
+      "success"
+    );
+  } catch (error) {
+    console.error("DELETE DELIVERY ERROR:", error);
+
+    showToast(
+      error.message ||
+        "Imeshindikana kufuta Delivery account",
+      "error"
+    );
+  }
+};
+
+  // ===============================
+  // DELETE MENU
+  // ===============================
+
+  const handleDeleteMenu = async (
+    id
+  ) => {
+
+    const confirmed =
+      window.confirm(
+        'Una uhakika unataka kufuta bidhaa hii?'
+      );
+
+    if (!confirmed) return;
+
+    try {
+
+      await deleteMenuItem(id);
+
+      showToast(
+        'Product imefutwa successfully!',
+        'success'
+      );
+
+    } catch (error) {
+
+      console.error(error);
+
+      showToast(
+        error.message ||
+          'Imeshindikana kufuta product',
+        'error'
+      );
+    }
+  };
+
+
+  // ===============================
+  // TOGGLE STOCK
+  // ===============================
+
+  const handleToggleStock = async (
+    id
+  ) => {
+
+    try {
+
+      await toggleStock(id);
+
+      showToast(
+        'Stock status imebadilishwa',
+        'success'
+      );
+
+    } catch (error) {
+
+      console.error(error);
+
+      showToast(
+        error.message ||
+          'Imeshindikana kubadilisha stock',
+        'error'
+      );
+    }
+  };
+
+
+  // ===============================
+  // OPEN ADD MENU
+  // ===============================
 
   const handleOpenAddMenu = () => {
-    setEditingItem(null);
+
+    setEditingMenuItem(null);
+
     setMenuForm({
       name: '',
-      category: 'Foods',
-      price: '',
-      prepTime: '15 mins',
-      image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80',
       description: '',
+      price: '',
+      category: 'Foods',
+      image:
+        'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80',
+      prepTime: '15-20 min',
+      inStock: true,
     });
+
     setIsMenuModalOpen(true);
   };
 
-  const handleOpenEditMenu = (item) => {
-    setEditingItem(item);
+
+  // ===============================
+  // OPEN EDIT MENU
+  // ===============================
+
+  const handleOpenEditMenu = (
+    item
+  ) => {
+
+    setEditingMenuItem(item);
+
     setMenuForm({
-      name: item.name,
-      category: item.category,
-      price: item.price,
-      prepTime: item.prepTime || '15 mins',
-      image: item.image,
-      description: item.description || '',
+      name: item.name || '',
+      description:
+        item.description || '',
+      price: item.price || '',
+      category:
+        item.category || 'Foods',
+      image: item.image || '',
+      prepTime:
+        item.prepTime ||
+        '15-20 min',
+      inStock:
+        item.inStock ?? true,
     });
+
     setIsMenuModalOpen(true);
   };
 
-  const handleSaveMenuItem = async (e) => {
+
+  // ===============================
+  // SAVE MENU
+  // ===============================
+
+  const handleSaveMenu = async (
+    e
+  ) => {
+
     e.preventDefault();
-    if (!menuForm.name || !menuForm.price) {
-      showToast('Tafadhali jaza jina na bei ya chakula', 'error');
+
+    try {
+
+      if (
+        !menuForm.name ||
+        !menuForm.price
+      ) {
+        showToast(
+          'Jina na price vinahitajika',
+          'error'
+        );
+        return;
+      }
+
+
+      const productData = {
+        name:
+          menuForm.name,
+
+        description:
+          menuForm.description,
+
+        price:
+          Number(menuForm.price),
+
+        category:
+          menuForm.category,
+
+        image:
+          menuForm.image,
+
+        prepTime:
+          menuForm.prepTime,
+
+        inStock:
+          menuForm.inStock,
+      };
+
+
+      if (editingMenuItem) {
+
+        await updateMenuItem(
+          editingMenuItem.id,
+          productData
+        );
+
+        showToast(
+          'Product imeupdate successfully!',
+          'success'
+        );
+
+      } else {
+
+        await addMenuItem(
+          productData
+        );
+
+        showToast(
+          'Product imeongezwa successfully!',
+          'success'
+        );
+      }
+
+
+      setIsMenuModalOpen(false);
+
+      setEditingMenuItem(null);
+
+    } catch (error) {
+
+      console.error(error);
+
+      showToast(
+        error.message ||
+          'Imeshindikana kuhifadhi product',
+        'error'
+      );
+    }
+  };
+
+
+  // ===============================
+  // ASSIGN ORDER
+  // ===============================
+
+  const handleAssignOrder = (
+    orderId
+  ) => {
+
+    if (!selectedStaffId) {
+
+      showToast(
+        'Chagua Delivery Staff kwanza',
+        'error'
+      );
+
       return;
     }
 
-    if (editingItem) {
-      await updateMenuItem(editingItem.id, {
-        ...menuForm,
-        price: Number(menuForm.price),
-      });
-      showToast(`${menuForm.name} imesasishwa kikamilifu!`, 'success');
-    } else {
-      await addMenuItem({
-        ...menuForm,
-        price: Number(menuForm.price),
-      });
-      showToast(`${menuForm.name} imeongezwa kwenye menyu ya Holland!`, 'success');
-    }
+    assignOrderToStaff(
+      orderId,
+      selectedStaffId
+    );
 
-    setIsMenuModalOpen(false);
+    showToast(
+      'Order imepewa Delivery Staff',
+      'success'
+    );
+
+    setSelectedOrder(null);
   };
 
-  const handleAssignRiderSubmit = (e) => {
-    e.preventDefault();
-    if (!assigningOrder || !selectedStaffId) return;
 
-    assignOrderToStaff(assigningOrder.id, selectedStaffId);
-    const staff = deliveryStaff.find((s) => s.id === selectedStaffId);
-    showToast(`Oda #${assigningOrder.id} imepewa ${staff?.name}!`, 'success');
-    setAssigningOrder(null);
-  };
+  // ===============================
+  // FILTER PRODUCTS
+  // ===============================
+
+  const filteredMenuItems =
+    menuItems.filter((item) =>
+      item.name
+        .toLowerCase()
+        .includes(
+          searchQuery.toLowerCase()
+        )
+    );
+
+
+  // ===============================
+  // FILTER ORDERS
+  // ===============================
+
+  const filteredOrders =
+    orders.filter((order) => {
+
+      const search =
+        searchQuery.toLowerCase();
+
+      return (
+        String(order.id)
+          .toLowerCase()
+          .includes(search) ||
+        String(order.customerName)
+          .toLowerCase()
+          .includes(search)
+      );
+    });
+
+
+  // ===============================
+  // DASHBOARD METRICS
+  // ===============================
+
+  const totalProducts =
+    menuItems.length;
+
+  const totalOrders =
+    orders.length;
+
+  const totalCustomers =
+    new Set(
+      orders.map(
+        (order) =>
+          order.customerName
+      )
+    ).size;
+
+  const totalDeliveryStaff =
+    deliveryStaff.length;
+
+
+  // ===============================
+  // RENDER
+  // ===============================
 
   return (
-    <div className="space-y-6 animate-fade-in pb-16">
-      {/* Admin Header */}
-      <div className="bg-gradient-to-r from-purple-950 via-slate-900 to-slate-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 border border-purple-900/30">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+
+      {/* TOAST */}
+
+      {toast && (
+        <div
+          className={`fixed top-5 right-5 z-[100] rounded-lg px-5 py-3 text-white shadow-lg ${
+            toast.type === 'error'
+              ? 'bg-red-600'
+              : 'bg-green-600'
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
+
+
+      {/* HEADER */}
+
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="p-1.5 bg-purple-500/20 text-purple-300 rounded-lg border border-purple-500/30 text-xs font-bold flex items-center gap-1">
-              <Shield className="w-3.5 h-3.5" />
-              <span>Admin Management Portal</span>
-            </span>
-            <span className="text-xs text-slate-400 font-medium">
-              Holland Restaurant (HQ)
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-            Holland Restaurant Dashboard
+          <h1 className="text-2xl font-bold text-gray-900">
+            Admin Dashboard
           </h1>
-          <p className="text-slate-400 text-xs sm:text-sm mt-1">
-            Simamia mapokezi ya oda, jiko, madereva wa pikipiki (delivery riders) na bei za vyakula.
+
+          <p className="text-sm text-gray-500">
+            Holland Restaurant Management
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2.5">
-          <button
-            onClick={handleOpenAddMenu}
-            className="px-4 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs sm:text-sm shadow-md shadow-amber-500/20 transition-all flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add New Foods</span>
-          </button>
+
+        <div className="flex items-center gap-3">
+
+          <div className="relative">
+
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) =>
+                setSearchQuery(
+                  e.target.value
+                )
+              }
+              className="rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-4 outline-none focus:border-gray-900"
+            />
+
+          </div>
+
         </div>
+
       </div>
 
-      {/* Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase">
-              Mapato Yote (Sales)
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-          </div>
-          <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-2">
-            TSh {formatTsh(totalRevenue)}
-          </h3>
-          <p className="text-[11px] text-emerald-600 font-bold mt-1">
-            Kutoka oda {orders.length} zilizowekwa
-          </p>
-        </div>
 
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase">
-              Oda Mpya (Pending)
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Clock className="w-4 h-4" />
-            </div>
-          </div>
-          <h3 className="text-xl sm:text-2xl font-black text-amber-600 mt-2">
-            {pendingOrders}
-          </h3>
-          <p className="text-[11px] text-slate-500 mt-1">
-            Zinahitaji kuidhinishwa
-          </p>
-        </div>
+      {/* TABS */}
 
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase">
-              Jikoni (Preparing)
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <ChefHat className="w-4 h-4" />
-            </div>
-          </div>
-          <h3 className="text-xl sm:text-2xl font-black text-blue-600 mt-2">
-            {preparingOrders}
-          </h3>
-          <p className="text-[11px] text-slate-500 mt-1">
-            Zinaandaliwa na wapishi
-          </p>
-        </div>
+      <div className="mb-6 flex flex-wrap gap-2">
 
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase">
-              Njiani (On Road)
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-              <Bike className="w-4 h-4" />
-            </div>
-          </div>
-          <h3 className="text-xl sm:text-2xl font-black text-purple-600 mt-2">
-            {outForDelivery}
-          </h3>
-          <p className="text-[11px] text-slate-500 mt-1">
-            Riders wanapeleka kwa wateja
-          </p>
-        </div>
+        <button
+          onClick={() =>
+            setActiveTab(
+              'dashboard'
+            )
+          }
+          className={`rounded-lg px-4 py-2 ${
+            activeTab ===
+            'dashboard'
+              ? 'bg-gray-900 text-white'
+              : 'bg-white text-gray-700'
+          }`}
+        >
+          Dashboard
+        </button>
+
+
+        <button
+          onClick={() =>
+            setActiveTab('orders')
+          }
+          className={`rounded-lg px-4 py-2 ${
+            activeTab === 'orders'
+              ? 'bg-gray-900 text-white'
+              : 'bg-white text-gray-700'
+          }`}
+        >
+          Orders
+        </button>
+
+
+        <button
+          onClick={() =>
+            setActiveTab('menu')
+          }
+          className={`rounded-lg px-4 py-2 ${
+            activeTab === 'menu'
+              ? 'bg-gray-900 text-white'
+              : 'bg-white text-gray-700'
+          }`}
+        >
+          Menu
+        </button>
+
+
+        <button
+          onClick={() =>
+            setActiveTab(
+              'delivery'
+            )
+          }
+          className={`rounded-lg px-4 py-2 ${
+            activeTab ===
+            'delivery'
+              ? 'bg-gray-900 text-white'
+              : 'bg-white text-gray-700'
+          }`}
+        >
+          Delivery Staff
+        </button>
+
       </div>
 
-      {/* Admin Tab Switcher */}
-      <div className="bg-white p-2 rounded-2xl border border-slate-200/80 flex flex-wrap gap-1.5">
-        {[
-          { id: 'orders', label: `Usimamizi wa Oda (${orders.length})`, icon: Package },
-          { id: 'menu', label: `Menyu ya Vyakula (${menuItems.length})`, icon: UtensilsCrossed },
-          { id: 'riders', label: `Madereva wa Delivery (${deliveryStaff.length})`, icon: Bike },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const isActive = adminTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setAdminTab(tab.id)}
-              className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                isActive
-                  ? 'bg-purple-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
 
-      {/* TAB 1: ORDERS DISPATCH PIPELINE */}
-      {adminTab === 'orders' && (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80">
-            <h2 className="text-sm font-bold text-slate-800">
-              Chuja kwa Hatua (Filter Status):
-            </h2>
-            <div className="flex flex-wrap gap-1.5">
-              {['All', 'Pending', 'Preparing', 'Out for Delivery', 'Delivered', 'Cancelled'].map((st) => (
-                <button
-                  key={st}
-                  onClick={() => setOrderFilter(st)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    orderFilter === st
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {st}
-                </button>
-              ))}
-            </div>
-          </div>
+      {/* DASHBOARD */}
 
-          <div className="space-y-3">
-            {filteredOrders.length === 0 ? (
-              <div className="bg-white rounded-3xl p-10 text-center border border-slate-200">
-                <Package className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                <p className="text-xs font-bold text-slate-600">Hakuna oda katika hatua hii.</p>
+      {activeTab ===
+        'dashboard' && (
+
+        <div className="space-y-6">
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+            <div className="rounded-xl bg-white p-5 shadow-sm">
+
+              <div className="mb-3 flex items-center justify-between">
+
+                <Package
+                  size={24}
+                />
+
               </div>
-            ) : (
-              filteredOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-5 hover:border-purple-300 transition-all"
-                >
-                  {/* Left: Customer & Items Info */}
-                  <div className="space-y-2 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="px-2.5 py-0.5 bg-slate-900 text-white text-xs font-black rounded-lg">
-                        #{order.id}
+
+              <p className="text-sm text-gray-500">
+                Total Products
+              </p>
+
+              <h2 className="text-2xl font-bold">
+                {totalProducts}
+              </h2>
+
+            </div>
+
+
+            <div className="rounded-xl bg-white p-5 shadow-sm">
+
+              <div className="mb-3 flex items-center justify-between">
+
+                <ShoppingBag
+                  size={24}
+                />
+
+              </div>
+
+              <p className="text-sm text-gray-500">
+                Total Orders
+              </p>
+
+              <h2 className="text-2xl font-bold">
+                {totalOrders}
+              </h2>
+
+            </div>
+
+
+            <div className="rounded-xl bg-white p-5 shadow-sm">
+
+              <div className="mb-3 flex items-center justify-between">
+
+                <Users
+                  size={24}
+                />
+
+              </div>
+
+              <p className="text-sm text-gray-500">
+                Customers
+              </p>
+
+              <h2 className="text-2xl font-bold">
+                {totalCustomers}
+              </h2>
+
+            </div>
+
+
+            <div className="rounded-xl bg-white p-5 shadow-sm">
+
+              <div className="mb-3 flex items-center justify-between">
+
+                <Truck
+                  size={24}
+                />
+
+              </div>
+
+              <p className="text-sm text-gray-500">
+                Delivery Staff
+              </p>
+
+              <h2 className="text-2xl font-bold">
+                {totalDeliveryStaff}
+              </h2>
+
+            </div>
+
+          </div>
+
+
+          <div className="rounded-xl bg-white p-5 shadow-sm">
+
+            <h2 className="mb-4 text-lg font-bold">
+              Recent Orders
+            </h2>
+
+            <div className="space-y-3">
+
+              {orders
+                .slice(0, 5)
+                .map((order) => (
+
+                  <div
+                    key={order.id}
+                    className="flex flex-col gap-2 rounded-lg border p-4 md:flex-row md:items-center md:justify-between"
+                  >
+
+                    <div>
+
+                      <p className="font-semibold">
+                        {order.id}
+                      </p>
+
+                      <p className="text-sm text-gray-500">
+                        {order.customerName}
+                      </p>
+
+                    </div>
+
+                    <div className="flex items-center gap-3">
+
+                      <span className="font-semibold">
+                        TZS{' '}
+                        {Number(
+                          order.total || 0
+                        ).toLocaleString()}
                       </span>
-                      <span className="font-bold text-sm text-slate-900">
-                        {order.customerName} ({order.customerUsername})
-                      </span>
-                      <span className="text-xs font-bold text-slate-400">
-                        • {order.date} saa {order.time}
-                      </span>
-                      <span
-                        className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase ${
-                          order.status === 'Pending'
-                            ? 'bg-amber-100 text-amber-800'
-                            : order.status === 'Preparing'
-                            ? 'bg-blue-100 text-blue-800'
-                            : order.status === 'Out for Delivery'
-                            ? 'bg-purple-100 text-purple-800'
-                            : order.status === 'Delivered'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
+
+                      <span className="rounded-full bg-gray-100 px-3 py-1 text-xs">
                         {order.status}
                       </span>
+
                     </div>
 
-                    {/* Customer Details */}
-                    <div className="flex flex-wrap gap-4 text-xs text-slate-500 font-medium">
-                      <span className="flex items-center gap-1">
-                        <Phone className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-slate-800 font-bold">{order.customerPhone}</span>
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{order.customerAddress}</span>
-                      </span>
-                      <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">
-                        {order.paymentMethod} ({order.paymentStatus})
-                      </span>
-                    </div>
-
-                    {/* Items List */}
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60 text-xs">
-                      <span className="font-bold text-slate-700 block mb-1">
-                        Vyakula vilivyoagizwa:
-                      </span>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-slate-600">
-                        {order.items?.map((item) => (
-                          <span key={item.id} className="font-medium">
-                            • <b className="text-slate-900">{item.quantity}x</b> {item.name}
-                          </span>
-                        ))}
-                      </div>
-                      {order.specialNotes && (
-                        <p className="mt-1.5 text-[11px] text-amber-800 font-semibold italic">
-                          Maelezo ya mteja: "{order.specialNotes}"
-                        </p>
-                      )}
-                    </div>
                   </div>
 
-                  {/* Right: Quick Action Buttons & Status Controllers */}
-                  <div className="flex flex-col sm:flex-row lg:flex-col items-end justify-between gap-3 shrink-0">
-                    <div className="text-right">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                        Jumla ya Malipo
-                      </span>
-                      <span className="text-lg font-black text-slate-900">
-                        TSh {formatTsh(order.total)}
-                      </span>
-                    </div>
+                ))}
 
-                    <div className="flex flex-wrap gap-1.5">
-                      {order.status === 'Pending' && (
-                        <button
-                          onClick={() => {
-                            updateOrderStatus(order.id, 'Preparing');
-                            showToast(`Oda #${order.id} imepelekwa jikoni!`, 'info');
-                          }}
-                          className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
-                        >
-                          <ChefHat className="w-3.5 h-3.5" />
-                          <span>Peleka Jikoni (Preparing)</span>
-                        </button>
-                      )}
+            </div>
 
-                      {order.status === 'Preparing' && (
-                        <button
-                          onClick={() => {
-                            setAssigningOrder(order);
-                          }}
-                          className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
-                        >
-                          <Bike className="w-3.5 h-3.5" />
-                          <span>Choose Rider (Assign Staff)</span>
-                        </button>
-                      )}
-
-                      {order.status === 'Out for Delivery' && (
-                        <div className="text-xs text-purple-700 font-bold bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-200 flex items-center gap-1.5">
-                          <Bike className="w-4 h-4" />
-                          <span>Rider: {order.assignedTo}</span>
-                        </div>
-                      )}
-
-                      {order.status !== 'Delivered' && order.status !== 'Cancelled' && (
-                        <button
-                          onClick={() => {
-                            if (window.confirm(`Ghairi oda #${order.id}?`)) {
-                              cancelOrder(order.id);
-                              showToast(`Oda #${order.id} imeghairiwa.`, 'error');
-                            }
-                          }}
-                          className="px-2.5 py-2 rounded-xl text-red-600 hover:bg-red-50 text-xs font-bold"
-                        >
-                          Cancel
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
           </div>
+
         </div>
       )}
 
-      {/* TAB 2: MENU MANAGEMENT (CRUD) */}
-      {adminTab === 'menu' && (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-500">Kitengo:</span>
-              <div className="flex flex-wrap gap-1.5">
-                {['All', 'Foods', 'Snacks', 'Drinks', 'Sauces'].map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setMenuFilter(cat)}
-                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
-                      menuFilter === cat
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            </div>
+
+      {/* ORDERS */}
+
+      {activeTab ===
+        'orders' && (
+
+        <div className="rounded-xl bg-white p-5 shadow-sm">
+
+          <div className="mb-5 flex items-center justify-between">
+
+            <h2 className="text-xl font-bold">
+              Orders
+            </h2>
+
+          </div>
+
+
+          <div className="space-y-4">
+
+            {filteredOrders.map(
+              (order) => (
+
+                <div
+                  key={order.id}
+                  className="rounded-xl border p-4"
+                >
+
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+
+                    <div>
+
+                      <p className="font-bold">
+                        {order.id}
+                      </p>
+
+                      <p className="text-sm text-gray-600">
+                        {order.customerName}
+                      </p>
+
+                      <p className="text-sm text-gray-500">
+                        {order.customerPhone}
+                      </p>
+
+                    </div>
+
+
+                    <div className="flex items-center gap-3">
+
+                      <span className="font-bold">
+                        TZS{' '}
+                        {Number(
+                          order.total || 0
+                        ).toLocaleString()}
+                      </span>
+
+                      <span className="rounded-full bg-gray-100 px-3 py-1 text-xs">
+                        {order.status}
+                      </span>
+
+                      <button
+                        onClick={() =>
+                          setSelectedOrder(
+                            order
+                          )
+                        }
+                        className="rounded-lg bg-gray-900 p-2 text-white"
+                      >
+                        <Eye
+                          size={18}
+                        />
+                      </button>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              )
+            )}
+
+          </div>
+
+        </div>
+      )}
+
+
+      {/* MENU */}
+
+      {activeTab ===
+        'menu' && (
+
+        <div className="rounded-xl bg-white p-5 shadow-sm">
+
+          <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+
+            <h2 className="text-xl font-bold">
+              Menu Management
+            </h2>
 
             <button
-              onClick={handleOpenAddMenu}
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5"
+              onClick={
+                handleOpenAddMenu
+              }
+              className="flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-white"
             >
-              <Plus className="w-4 h-4" />
-              <span>Add New Food</span>
+              <Plus size={18} />
+              Add Product
             </button>
+
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredMenuItems.map((item) => (
-              <div
-                key={item.id}
-                className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs flex flex-col justify-between gap-3"
-              >
-                <div className="flex gap-3">
-                  <FoodImage
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+
+            {filteredMenuItems.map(
+              (item) => (
+
+                <div
+                  key={item.id}
+                  className="overflow-hidden rounded-xl border bg-white"
+                >
+
+                  <img
                     src={item.image}
                     alt={item.name}
-                    category={item.category}
-                    className="w-20 h-20 rounded-2xl object-cover shrink-0"
+                    className="h-48 w-full object-cover"
                   />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase font-bold text-purple-600">
-                        {item.category}
-                      </span>
-                      <button
-                        onClick={() => toggleStock(item.id).catch(() => showToast('Imeshindikana kubadili hali ya bidhaa', 'error'))}
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+
+
+                  <div className="p-4">
+
+                    <div className="mb-2 flex items-start justify-between gap-2">
+
+                      <h3 className="font-bold">
+                        {item.name}
+                      </h3>
+
+                      <span
+                        className={`rounded-full px-2 py-1 text-xs ${
                           item.inStock
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-red-100 text-red-800'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
                         }`}
                       >
-                        {item.inStock ? 'In Stock' : 'Out of Stock'}
-                      </button>
+                        {item.inStock
+                          ? 'In Stock'
+                          : 'Out of Stock'}
+                      </span>
+
                     </div>
-                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 mt-1 line-clamp-1">
-                      {item.name}
-                    </h4>
-                    <span className="text-xs font-black text-slate-900 block mt-1">
-                      TSh {formatTsh(item.price)}
-                    </span>
-                    <span className="text-[11px] text-slate-400">
-                      Muda: {item.prepTime || '15 mins'}
-                    </span>
-                  </div>
-                </div>
 
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                  <button
-                    onClick={() => toggleStock(item.id).catch(() => showToast('Imeshindikana kubadili hali ya bidhaa', 'error'))}
-                    className="text-xs font-bold text-slate-600 hover:text-slate-900"
-                  >
-                    {item.inStock ? 'Badili: Imeisha' : 'Badili: Ipo'}
-                  </button>
 
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => handleOpenEditMenu(item)}
-                      className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-purple-600 transition-colors"
-                      title="Hariri"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (window.confirm(`Je, una uhakika unataka kufuta "${item.name}"?`)) {
-                          deleteMenuItem(item.id)
-                            .then(() => showToast(`${item.name} imefutwa!`, 'info'))
-                            .catch(() => showToast('Imeshindikana kufuta bidhaa', 'error'));
+                    <p className="mb-2 text-sm text-gray-500">
+                      {item.description}
+                    </p>
+
+
+                    <p className="mb-4 font-bold">
+                      TZS{' '}
+                      {Number(
+                        item.price
+                      ).toLocaleString()}
+                    </p>
+
+
+                    <div className="flex gap-2">
+
+                      <button
+                        onClick={() =>
+                          handleOpenEditMenu(
+                            item
+                          )
                         }
-                      }}
-                      className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-                      title="Futa"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2"
+                      >
+                        <Edit
+                          size={16}
+                        />
+                        Edit
+                      </button>
 
-      {/* TAB 3: RIDERS / DELIVERY STAFF */}
-      {adminTab === 'riders' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {deliveryStaff.map((staff) => (
-            <div
-              key={staff.id}
-              className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white font-black text-lg flex items-center justify-center">
-                  {staff.name[0]}
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900">{staff.name}</h4>
-                  <p className="text-xs text-slate-500">{staff.vehicle}</p>
-                  <span
-                    className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 ${
-                      staff.status === 'Available'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-purple-100 text-purple-800'
-                    }`}
-                  >
-                    {staff.status}
-                  </span>
-                </div>
-              </div>
 
-              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/60 text-xs space-y-1.5">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Phone Number:</span>
-                  <span className="font-bold text-slate-900">{staff.phone}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Oda Zilizowasilishwa:</span>
-                  <span className="font-bold text-slate-900">{staff.deliveriesCount} trips</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Kiwango (Rating):</span>
-                  <span className="font-bold text-amber-600">★ {staff.rating}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+                      <button
+                        onClick={() =>
+                          handleToggleStock(
+                            item.id
+                          )
+                        }
+                        className="rounded-lg border px-3 py-2"
+                      >
+                        {item.inStock
+                          ? 'Hide'
+                          : 'Show'}
+                      </button>
 
-      {/* MODAL: ADD / EDIT MENU ITEM */}
-      {isMenuModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 animate-fade-in space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900">
-                {editingItem ? 'Hariri Chakula' : 'Add New Food (Holland Menu)'}
-              </h3>
-              <button
-                onClick={() => setIsMenuModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            <form onSubmit={handleSaveMenuItem} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Food Name:
-                </label>
-                <input
-                  type="text"
-                  value={menuForm.name}
-                  onChange={(e) => setMenuForm({ ...menuForm, name: e.target.value })}
-                  placeholder="mfano: Wali wa Nazi & Samaki"
-                  required
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
+                      <button
+                        onClick={() =>
+                          handleDeleteMenu(
+                            item.id
+                          )
+                        }
+                        className="rounded-lg border border-red-200 px-3 py-2 text-red-600"
+                      >
+                        <Trash2
+                          size={16}
+                        />
+                      </button>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Category:
-                  </label>
-                  <select
-                    value={menuForm.category}
-                    onChange={(e) => setMenuForm({ ...menuForm, category: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="Foods">Foods</option>
-                    <option value="Snacks">Snacks</option>
-                    <option value="Drinks">Drinks</option>
-                    <option value="Sauces">Sauces</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Price (TSh):
-                  </label>
-                  <input
-                    type="number"
-                    value={menuForm.price}
-                    onChange={(e) => setMenuForm({ ...menuForm, price: e.target.value })}
-                    placeholder="12000"
-                    required
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Image URL:
-                </label>
-                <input
-                  type="url"
-                  value={menuForm.image}
-                  onChange={(e) => setMenuForm({ ...menuForm, image: e.target.value })}
-                  placeholder="https://images.unsplash.com/..."
-                  required
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Description:
-                </label>
-                <textarea
-                  rows={2}
-                  value={menuForm.description}
-                  onChange={(e) => setMenuForm({ ...menuForm, description: e.target.value })}
-                  placeholder="Viungo asilia, ladha nzuri..."
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:bg-white focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
-
-              <div className="pt-2 flex gap-2">
-                <button
-                  type="submit"
-                  className="flex-1 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md transition-all"
-                >
-                  {editingItem ? 'Hifadhi Mabadiliko' : 'Add to Menu'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsMenuModalOpen(false)}
-                  className="px-4 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: ASSIGN STAFF TO ORDER */}
-      {assigningOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-fade-in space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900">
-                Mpe Dereva Oda #{assigningOrder.id}
-              </h3>
-              <button
-                onClick={() => setAssigningOrder(null)}
-                className="text-slate-400 hover:text-slate-600 p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-500">
-              Chagua dereva wa pikipiki (rider) atakayepeleka oda kwa mteja ({assigningOrder.customerName}, {assigningOrder.customerAddress}):
-            </p>
-
-            <form onSubmit={handleAssignRiderSubmit} className="space-y-3">
-              {deliveryStaff.map((staff) => (
-                <label
-                  key={staff.id}
-                  className={`p-3.5 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
-                    selectedStaffId === staff.id
-                      ? 'bg-purple-50 border-purple-500 text-purple-950'
-                      : 'bg-white border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      name="staff_select"
-                      checked={selectedStaffId === staff.id}
-                      onChange={() => setSelectedStaffId(staff.id)}
-                      className="w-4 h-4 text-purple-600"
-                    />
-                    <div>
-                      <div className="text-xs font-bold">{staff.name}</div>
-                      <div className="text-[11px] text-slate-500">{staff.vehicle} • {staff.phone}</div>
                     </div>
-                  </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                    {staff.status}
-                  </span>
-                </label>
-              ))}
 
-              <div className="pt-2 flex gap-2">
-                <button
-                  type="submit"
-                  className="flex-1 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md transition-all"
-                >
-                  Tuma Dereva (Out for Delivery)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAssigningOrder(null)}
-                  className="px-4 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs"
-                >
-                  Funga
-                </button>
-              </div>
-            </form>
+                  </div>
+
+                </div>
+
+              )
+            )}
+
           </div>
+
         </div>
       )}
+
+
+      {/* DELIVERY STAFF */}
+
+      {activeTab ===
+        'delivery' && (
+
+        <div className="rounded-xl bg-white p-5 shadow-sm">
+
+          <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+
+            <div>
+
+              <h2 className="text-xl font-bold">
+                Delivery Staff
+              </h2>
+
+              <p className="text-sm text-gray-500">
+                Manage Delivery accounts
+              </p>
+
+            </div>
+
+
+            <button
+              onClick={() =>
+                setIsDeliveryModalOpen(
+                  true
+                )
+              }
+              className="flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-white"
+            >
+              <Plus size={18} />
+              Add Delivery Staff
+            </button>
+
+          </div>
+
+
+          {deliveryStaff.length ===
+          0 ? (
+
+            <div className="rounded-lg border border-dashed p-10 text-center">
+
+              <Truck
+                size={40}
+                className="mx-auto mb-3 text-gray-400"
+              />
+
+              <p className="font-semibold">
+                No Delivery Staff
+              </p>
+
+              <p className="text-sm text-gray-500">
+                Add a Delivery Staff account
+                to get started.
+              </p>
+
+            </div>
+
+          ) : (
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+
+              {deliveryStaff.map(
+                (staff) => (
+
+                  <div
+                    key={staff.id}
+                    className="rounded-xl border p-4"
+                  >
+
+                    <div className="mb-3 flex items-center justify-between">
+
+                      <div>
+
+                        <h3 className="font-bold">
+                          {staff.name}
+                        </h3>
+
+                        <p className="text-sm text-gray-500">
+                          {staff.email}
+                        </p>
+
+                      </div>
+
+                      <span className="rounded-full bg-green-100 px-3 py-1 text-xs text-green-700">
+                        {staff.status}
+                      </span>
+
+                    </div>
+
+
+                    <div className="space-y-1 text-sm text-gray-600">
+
+                      <p>
+                        Phone:{' '}
+                        {staff.phone ||
+                          'Not provided'}
+                      </p>
+
+                      <p>
+                        Address:{' '}
+                        {staff.address ||
+                          'Not provided'}
+                      </p>
+
+                      <div className="mt-4">
+                       <button
+                          onClick={() => handleDeleteDelivery(staff.id)}
+                          className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-red-600 hover:bg-red-50"
+                        >
+                         <Trash2 size={16} />
+                          Delete
+                       </button>
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                )
+              )}
+
+            </div>
+
+          )}
+
+        </div>
+      )}
+
+
+      {/* ADD DELIVERY MODAL */}
+
+      {isDeliveryModalOpen && (
+
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+
+          <div className="w-full max-w-lg rounded-xl bg-white p-6">
+
+            <div className="mb-5 flex items-center justify-between">
+
+              <h2 className="text-xl font-bold">
+                Add Delivery Staff
+              </h2>
+
+              <button
+                onClick={() =>
+                  setIsDeliveryModalOpen(
+                    false
+                  )
+                }
+                className="rounded-lg p-2 hover:bg-gray-100"
+              >
+                <X size={20} />
+              </button>
+
+            </div>
+
+
+            <form
+              onSubmit={
+                handleAddDelivery
+              }
+              className="space-y-4"
+            >
+
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={
+                  deliveryForm.full_name
+                }
+                onChange={(e) =>
+                  setDeliveryForm(
+                    (prev) => ({
+                      ...prev,
+                      full_name:
+                        e.target.value,
+                    })
+                  )
+                }
+                className="w-full rounded-lg border px-4 py-3 outline-none focus:border-gray-900"
+              />
+
+
+              <input
+                type="email"
+                placeholder="Email"
+                value={
+                  deliveryForm.email
+                }
+                onChange={(e) =>
+                  setDeliveryForm(
+                    (prev) => ({
+                      ...prev,
+                      email:
+                        e.target.value,
+                    })
+                  )
+                }
+                className="w-full rounded-lg border px-4 py-3 outline-none focus:border-gray-900"
+              />
+
+
+              <input
+                type="text"
+                placeholder="Phone"
+                value={
+                  deliveryForm.phone
+                }
+                onChange={(e) =>
+                  setDeliveryForm(
+                    (prev) => ({
+                      ...prev,
+                      phone:
+                        e.target.value,
+                    })
+                  )
+                }
+                className="w-full rounded-lg border px-4 py-3 outline-none focus:border-gray-900"
+              />
+
+
+              <input
+                type="text"
+                placeholder="Address"
+                value={
+                  deliveryForm.address
+                }
+                onChange={(e) =>
+                  setDeliveryForm(
+                    (prev) => ({
+                      ...prev,
+                      address:
+                        e.target.value,
+                    })
+                  )
+                }
+                className="w-full rounded-lg border px-4 py-3 outline-none focus:border-gray-900"
+              />
+
+
+              <input
+                type="password"
+                placeholder="Password"
+                value={
+                  deliveryForm.password
+                }
+                onChange={(e) =>
+                  setDeliveryForm(
+                    (prev) => ({
+                      ...prev,
+                      password:
+                        e.target.value,
+                    })
+                  )
+                }
+                className="w-full rounded-lg border px-4 py-3 outline-none focus:border-gray-900"
+              />
+
+
+              <button
+                type="submit"
+                className="w-full rounded-lg bg-gray-900 px-4 py-3 font-semibold text-white"
+              >
+                Create Delivery Account
+              </button>
+
+            </form>
+
+          </div>
+
+        </div>
+
+      )}
+
+
+      {/* MENU MODAL */}
+
+      {isMenuModalOpen && (
+
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6">
+
+            <div className="mb-5 flex items-center justify-between">
+
+              <h2 className="text-xl font-bold">
+
+                {editingMenuItem
+                  ? 'Edit Product'
+                  : 'Add Product'}
+
+              </h2>
+
+              <button
+                onClick={() =>
+                  setIsMenuModalOpen(
+                    false
+                  )
+                }
+                className="rounded-lg p-2 hover:bg-gray-100"
+              >
+                <X size={20} />
+              </button>
+
+            </div>
+
+
+            <form
+              onSubmit={
+                handleSaveMenu
+              }
+              className="space-y-4"
+            >
+
+              <input
+                type="text"
+                placeholder="Product Name"
+                value={
+                  menuForm.name
+                }
+                onChange={(e) =>
+                  setMenuForm(
+                    (prev) => ({
+                      ...prev,
+                      name:
+                        e.target.value,
+                    })
+                  )
+                }
+                className="w-full rounded-lg border px-4 py-3 outline-none"
+              />
+
+
+              <textarea
+                placeholder="Description"
+                value={
+                  menuForm.description
+                }
+                onChange={(e) =>
+                  setMenuForm(
+                    (prev) => ({
+                      ...prev,
+                      description:
+                        e.target.value,
+                    })
+                  )
+                }
+                className="w-full rounded-lg border px-4 py-3 outline-none"
+                rows="3"
+              />
+
+
+              <input
+                type="number"
+                placeholder="Price"
+                value={
+                  menuForm.price
+                }
+                onChange={(e) =>
+                  setMenuForm(
+                    (prev) => ({
+                      ...prev,
+                      price:
+                        e.target.value,
+                    })
+                  )
+                }
+                className="w-full rounded-lg border px-4 py-3 outline-none"
+              />
+
+
+              <select
+                value={
+                  menuForm.category
+                }
+                onChange={(e) =>
+                  setMenuForm(
+                    (prev) => ({
+                      ...prev,
+                      category:
+                        e.target.value,
+                    })
+                  )
+                }
+                className="w-full rounded-lg border px-4 py-3 outline-none"
+              >
+                <option value="Foods">
+                  Foods
+                </option>
+
+                <option value="Drinks">
+                  Drinks
+                </option>
+
+                <option value="Snacks">
+                  Snacks
+                </option>
+
+              </select>
+
+
+              <input
+                type="text"
+                placeholder="Image URL"
+                value={
+                  menuForm.image
+                }
+                onChange={(e) =>
+                  setMenuForm(
+                    (prev) => ({
+                      ...prev,
+                      image:
+                        e.target.value,
+                    })
+                  )
+                }
+                className="w-full rounded-lg border px-4 py-3 outline-none"
+              />
+
+
+              <input
+                type="text"
+                placeholder="Preparation Time"
+                value={
+                  menuForm.prepTime
+                }
+                onChange={(e) =>
+                  setMenuForm(
+                    (prev) => ({
+                      ...prev,
+                      prepTime:
+                        e.target.value,
+                    })
+                  )
+                }
+                className="w-full rounded-lg border px-4 py-3 outline-none"
+              />
+
+
+              <label className="flex items-center gap-3">
+
+                <input
+                  type="checkbox"
+                  checked={
+                    menuForm.inStock
+                  }
+                  onChange={(e) =>
+                    setMenuForm(
+                      (prev) => ({
+                        ...prev,
+                        inStock:
+                          e.target.checked,
+                      })
+                    )
+                  }
+                />
+
+                <span>
+                  In Stock
+                </span>
+
+              </label>
+
+
+              <button
+                type="submit"
+                className="w-full rounded-lg bg-gray-900 px-4 py-3 font-semibold text-white"
+              >
+                {editingMenuItem
+                  ? 'Update Product'
+                  : 'Add Product'}
+              </button>
+
+            </form>
+
+          </div>
+
+        </div>
+
+      )}
+
+
+      {/* ORDER DETAILS MODAL */}
+
+      {selectedOrder && (
+
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6">
+
+            <div className="mb-5 flex items-center justify-between">
+
+              <h2 className="text-xl font-bold">
+                Order Details
+              </h2>
+
+              <button
+                onClick={() =>
+                  setSelectedOrder(
+                    null
+                  )
+                }
+                className="rounded-lg p-2 hover:bg-gray-100"
+              >
+                <X size={20} />
+              </button>
+
+            </div>
+
+
+            <div className="space-y-3">
+
+              <p>
+                <strong>
+                  Order:
+                </strong>{' '}
+                {selectedOrder.id}
+              </p>
+
+              <p>
+                <strong>
+                  Customer:
+                </strong>{' '}
+                {
+                  selectedOrder.customerName
+                }
+              </p>
+
+              <p>
+                <strong>
+                  Phone:
+                </strong>{' '}
+                {
+                  selectedOrder.customerPhone
+                }
+              </p>
+
+              <p>
+                <strong>
+                  Address:
+                </strong>{' '}
+                {
+                  selectedOrder.customerAddress
+                }
+              </p>
+
+              <p>
+                <strong>
+                  Status:
+                </strong>{' '}
+                {
+                  selectedOrder.status
+                }
+              </p>
+
+              <p>
+                <strong>
+                  Total:
+                </strong>{' '}
+                TZS{' '}
+                {Number(
+                  selectedOrder.total ||
+                    0
+                ).toLocaleString()}
+              </p>
+
+
+              <div className="border-t pt-4">
+
+                <h3 className="mb-3 font-bold">
+                  Assign Delivery Staff
+                </h3>
+
+
+                <select
+                  value={
+                    selectedStaffId
+                  }
+                  onChange={(e) =>
+                    setSelectedStaffId(
+                      e.target.value
+                    )
+                  }
+                  className="mb-3 w-full rounded-lg border px-4 py-3"
+                >
+
+                  <option value="">
+                    Select Delivery Staff
+                  </option>
+
+                  {deliveryStaff.map(
+                    (staff) => (
+
+                      <option
+                        key={staff.id}
+                        value={staff.id}
+                      >
+                        {staff.name}
+                      </option>
+
+                    )
+                  )}
+
+                </select>
+
+
+                <button
+                  onClick={() =>
+                    handleAssignOrder(
+                      selectedOrder.id
+                    )
+                  }
+                  className="w-full rounded-lg bg-gray-900 px-4 py-3 font-semibold text-white"
+                >
+                  Assign Order
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
     </div>
   );
 };
+
+export default AdminDashboard;

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { UtensilsCrossed, Shield, Bike, User, ArrowRight, Check } from 'lucide-react';
+import { UtensilsCrossed, ArrowRight, Check } from 'lucide-react';
 
 export const AuthPage = ({ onComplete }) => {
   const { login, register } = useAuth();
@@ -10,12 +10,13 @@ export const AuthPage = ({ onComplete }) => {
   const { language, setLanguage } = useLanguage();
   const isEnglish = language === 'en';
 
-  const [selectedRole, setSelectedRole] = useState('customer'); // 'customer' | 'admin' | 'delivery'
+   // 'customer' | 'admin' | 'delivery'
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
+  const [selectedRole, setSelectedRole] = useState('customer');
 
   // Login form state
-  const [loginIdentifier, setLoginIdentifier] = useState('customer@holland.com');
-  const [loginPassword, setLoginPassword] = useState('123456');
+  const [loginIdentifier, setLoginIdentifier] = useState('');
+const [loginPassword, setLoginPassword] = useState('');
 
   // Register form state (from Sketch Page 1)
   const [registerData, setRegisterData] = useState({
@@ -35,10 +36,10 @@ export const AuthPage = ({ onComplete }) => {
   }
 
   const result = await login(
-    loginIdentifier,
-    loginPassword,
-    selectedRole
-  );
+  loginIdentifier,
+  loginPassword,
+  selectedRole
+);
 
   if (!result.success) {
     showToast(
@@ -49,13 +50,15 @@ export const AuthPage = ({ onComplete }) => {
   }
 
   showToast(
-    `Karibu Holland Restaurant! Umeingia kama ${selectedRole.toUpperCase()}`,
-    'success'
-  );
+  isEnglish
+    ? 'Welcome to Holland Restaurant!'
+    : 'Karibu Holland Restaurant!',
+  'success'
+);
 
-  if (onComplete) {
-    onComplete(selectedRole);
-  }
+if (onComplete) {
+  onComplete(result.user?.role);
+}
 };
 
   const handleRegisterSubmit = async (e) => {
@@ -94,32 +97,7 @@ export const AuthPage = ({ onComplete }) => {
   setAuthMode('login');
 };
 
-  const setDemoCredentials = (role) => {
-    setSelectedRole(role);
-    if (role === 'customer') {
-      setLoginIdentifier('customer@holland.com');
-      setLoginPassword('123456');
-    } else if (role === 'admin') {
-      setLoginIdentifier('admin@holland.co.tz');
-      setLoginPassword('admin123');
-    } else if (role === 'delivery') {
-      setLoginIdentifier('0714 555 123');
-      setLoginPassword('delivery123');
-    }
-  };
 
-  const handleDemoLogin = async (role) => {
-    const credentials = {
-      customer: ['customer@holland.com', '123456'],
-      admin: ['admin@holland.co.tz', 'admin123'],
-      delivery: ['juma@holland.co.tz', 'delivery123'],
-    }[role];
-    setDemoCredentials(role);
-    const result = await login(credentials[0], credentials[1], role);
-    if (!result.success) {
-      showToast(result.message || 'Akaunti ya majaribio haijaandaliwa', 'error');
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50/70 via-slate-50 to-orange-50/50 flex flex-col justify-center items-center p-4 sm:p-6">
@@ -148,49 +126,46 @@ export const AuthPage = ({ onComplete }) => {
             {isEnglish ? '* Please sign in to continue:' : '* Tafadhali ingia ili kuendelea:'}
           </p>
         </div>
+        
+         {/* ROLE SELECTOR */}
+<div className="flex items-center justify-center gap-2 mb-5">
+  <button
+    type="button"
+    onClick={() => setSelectedRole('customer')}
+    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+      selectedRole === 'customer'
+        ? 'bg-amber-500 text-white shadow-md'
+        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+    }`}
+  >
+    Customer
+  </button>
 
-        {/* Sketch Page 1 Role Tabs: [Customers] [Admin] [Delivery staff] */}
-        <div className="p-6">
-          <div className="grid grid-cols-3 gap-2 bg-slate-100 p-1.5 rounded-2xl mb-6 border border-slate-200/80">
-            <button
-              type="button"
-              onClick={() => setDemoCredentials('customer')}
-              className={`py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
-                selectedRole === 'customer'
-                  ? 'bg-white text-amber-600 shadow-sm shadow-slate-200 border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <User className="w-4 h-4" />
-              <span>{isEnglish ? 'Customers' : 'Wateja'}</span>
-            </button>
+  <button
+    type="button"
+    onClick={() => setSelectedRole('admin')}
+    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+      selectedRole === 'admin'
+        ? 'bg-amber-500 text-white shadow-md'
+        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+    }`}
+  >
+    Admin
+  </button>
 
-            <button
-              type="button"
-              onClick={() => setDemoCredentials('admin')}
-              className={`py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
-                selectedRole === 'admin'
-                  ? 'bg-white text-purple-600 shadow-sm shadow-slate-200 border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Shield className="w-4 h-4" />
-              <span>Admin</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setDemoCredentials('delivery')}
-              className={`py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
-                selectedRole === 'delivery'
-                  ? 'bg-white text-emerald-600 shadow-sm shadow-slate-200 border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Bike className="w-4 h-4" />
-              <span className="truncate">Delivery staff</span>
-            </button>
-          </div>
+  <button
+    type="button"
+    onClick={() => setSelectedRole('delivery')}
+    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+      selectedRole === 'delivery'
+        ? 'bg-amber-500 text-white shadow-md'
+        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+    }`}
+  >
+    Delivery
+  </button>
+</div>
+        
 
           {/* Mode Switcher: Sign In OR Register (as drawn in sketch) */}
           <div className="flex items-center justify-center gap-3 mb-6">
@@ -261,41 +236,7 @@ export const AuthPage = ({ onComplete }) => {
                 <ArrowRight className="w-4 h-4" />
               </button>
 
-              {/* Quick 1-Click Demo Logins */}
-              <div className="pt-4 mt-4 border-t border-slate-100">
-                <p className="text-xs text-center text-slate-500 mb-2 font-medium">
-                  Bonyeza haraka kuingia kwa akaunti za majaribio (Demo):
-                </p>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleDemoLogin('customer');
-                    }}
-                    className="text-xs px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 font-medium"
-                  >
-                    Mteja (Customer)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleDemoLogin('admin');
-                    }}
-                    className="text-xs px-2.5 py-1.5 rounded-lg bg-purple-50 text-purple-800 border border-purple-200 hover:bg-purple-100 font-medium"
-                  >
-                    Admin (Meneja)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleDemoLogin('delivery');
-                    }}
-                    className="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 font-medium"
-                  >
-                    Delivery Staff (Rider)
-                  </button>
-                </div>
-              </div>
+          
             </form>
           )}
 
@@ -395,7 +336,7 @@ export const AuthPage = ({ onComplete }) => {
               </div>
             </form>
           )}
-        </div>
+        
       </div>
     </div>
   );

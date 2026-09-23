@@ -15,7 +15,7 @@ import { OrderUpdateCart } from './components/customer/OrderUpdateCart';
 import { PaymentBill } from './components/customer/PaymentBill';
 import { PersonalInformation } from './components/customer/PersonalInformation';
 import { OthersPage } from './components/customer/OthersPage';
-import { AdminDashboard } from './components/admin/AdminDashboard';
+import AdminDashboard from './components/admin/AdminDashboard';
 import { DeliveryDashboard } from './components/delivery/DeliveryDashboard';
 
 const MainApp = () => {
