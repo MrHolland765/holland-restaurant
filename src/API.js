@@ -74,6 +74,36 @@ export const getProducts = async () => {
   return request("/api/products");
 };
 
+export const getOrders = () => request("/api/orders");
+
+export const createOrder = (order) =>
+  request("/api/orders", {
+    method: "POST",
+    body: JSON.stringify(order),
+  });
+
+export const updateOrder = (id, changes) =>
+  request(`/api/orders/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify(changes),
+  });
+
+export const assignOrder = (id, staffId) =>
+  request(`/api/orders/${encodeURIComponent(id)}/assign`, {
+    method: "PUT",
+    body: JSON.stringify({ staffId }),
+  });
+
+export const confirmOrderPayment = (id) =>
+  request(`/api/orders/${encodeURIComponent(id)}/payment-confirmation`, {
+    method: "PUT",
+  });
+
+export const deleteOrder = (id) =>
+  request(`/api/orders/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+
 export const createProduct = (product) => {
   return request("/api/products", {
     method: "POST",

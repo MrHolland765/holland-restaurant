@@ -3,14 +3,18 @@ import { useRestaurant } from '../../context/RestaurantContext';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import {
-  CreditCard,
-  Smartphone,
-  CheckCircle2,
-  AlertCircle,
   ArrowLeft,
   ShieldCheck,
   Receipt,
+  Smartphone,
 } from 'lucide-react';
+
+const MOBILE_MONEY_PROVIDERS = [
+  { id: 'tigo', label: 'Tigo Pesa', paymentMethod: 'Tigo Pesa (Manual)' },
+  { id: 'mpesa', label: 'M-Pesa', paymentMethod: 'M-Pesa (Manual)' },
+  { id: 'airtel', label: 'Airtel Money', paymentMethod: 'Airtel Money (Manual)' },
+  { id: 'halopesa', label: 'Halo Pesa', paymentMethod: 'Halo Pesa (Manual)' },
+];
 
 export const PaymentBill = () => {
   const {
@@ -20,22 +24,16 @@ export const PaymentBill = () => {
     cartTotal,
     createOrder,
     setActiveView,
-    clearCart,
   } = useRestaurant();
   const { currentUser } = useAuth();
   const { showToast } = useToast();
 
-  // Selected payment method: 'mpesa' | 'card' | 'cash'
-  const [paymentMethod, setPaymentMethod] = useState('mpesa');
+  const [paymentMethod, setPaymentMethod] = useState('tigo');
 
-  // Mobile Money Provider: 'vodacom' | 'tigo' | 'airtel' | 'halopesa'
-  const [mobileProvider, setMobileProvider] = useState('vodacom');
-  const [mobilePhone, setMobilePhone] = useState('712345678');
-
-  // Bank Card Form
-  const [cardNumber, setCardNumber] = useState('4111 2222 3333 4444');
-  const [cardExpiry, setCardExpiry] = useState('12/28');
-  const [cardCvv, setCardCvv] = useState('789');
+  const [mobilePhone, setMobilePhone] = useState(
+    currentUser?.phone?.replace(/\D/g, '').slice(-9) || ''
+  );
+  const [paymentReference, setPaymentReference] = useState('');
 
   // Special Notes
   const [specialNotes, setSpecialNotes] = useState('');
@@ -43,23 +41,9 @@ export const PaymentBill = () => {
 
   const formatTsh = (val) => Number(val || 0).toLocaleString('en-US');
 
-  // Transaction fee calculation (Sketch: "Ada ya Muamala: (Itahasabiwa)")
-  const calculateTransactionFee = () => {
-    if (paymentMethod === 'mpesa') {
-      if (cartSubtotal > 50000) return 1200;
-      if (cartSubtotal > 20000) return 800;
-      return 500;
-    }
-    if (paymentMethod === 'card') {
-      return Math.round(cartSubtotal * 0.015); // 1.5% bank processing
-    }
-    return 0; // Cash
-  };
+  const grandTotal = cartTotal;
 
-  const transactionFee = calculateTransactionFee();
-  const grandTotal = cartTotal + transactionFee;
-
-  const handlePayNow = (e) => {
+  const handlePayNow = async (e) => {
     e.preventDefault();
 
     if (cart.length === 0) {
@@ -68,48 +52,39 @@ export const PaymentBill = () => {
       return;
     }
 
-    if (paymentMethod === 'mpesa' && (!mobilePhone || mobilePhone.length < 9)) {
+    if (paymentMethod !== 'cash' && (!mobilePhone || mobilePhone.length < 9)) {
       showToast('Tafadhali weka namba sahihi ya simu (mfano: 712345678)', 'error');
       return;
     }
 
-    if (paymentMethod === 'card' && (!cardNumber || !cardExpiry || !cardCvv)) {
-      showToast('Tafadhali kamilisha maelezo yote ya kadi ya benki', 'error');
+    if (paymentMethod !== 'cash' && !/^[A-Z0-9-]{6,40}$/i.test(paymentReference.trim())) {
+      showToast(`Weka transaction ID ya ${MOBILE_MONEY_PROVIDERS.find((provider) => provider.id === paymentMethod)?.label} baada ya kutuma pesa.`, 'error');
       return;
     }
 
     setIsProcessing(true);
 
-    // Simulate USSD push prompt or card processing
-    setTimeout(() => {
-      let methodLabel = 'M-PESA (Vodacom)';
-      if (paymentMethod === 'mpesa') {
-        const providerName =
-          mobileProvider === 'vodacom'
-            ? 'Vodacom M-PESA'
-            : mobileProvider === 'tigo'
-            ? 'Tigo Pesa'
-            : mobileProvider === 'airtel'
-            ? 'Airtel Money'
-            : 'Halopesa';
-        methodLabel = `${providerName} (+255 ${mobilePhone})`;
-      } else if (paymentMethod === 'card') {
-        methodLabel = `Kadi ya Benki (**** ${cardNumber.slice(-4)})`;
-      } else {
-        methodLabel = 'Lipa Baadaye (Cash on Delivery)';
-      }
-
-      const newOrder = createOrder({
-        paymentMethod: methodLabel,
-        paymentPhone: `+255 ${mobilePhone}`,
+    try {
+      const newOrder = await createOrder({
+        paymentMethod: MOBILE_MONEY_PROVIDERS.find((provider) => provider.id === paymentMethod)?.paymentMethod || 'Lipa Baadaye (Cash on Delivery)',
+        paymentPhone: paymentMethod === 'cash' ? currentUser?.phone || '' : `+255 ${mobilePhone}`,
+        paymentReference: paymentMethod === 'cash' ? '' : paymentReference.trim().toUpperCase(),
         specialNotes: specialNotes,
-        customer: currentUser,
       });
 
-      setIsProcessing(false);
-      showToast(`Malipo ya TSh ${formatTsh(grandTotal)} yamefanikiwa! Oda #${newOrder.id} imeundwa.`, 'success', 4000);
+      showToast(
+        paymentMethod !== 'cash'
+          ? `Oda #${newOrder.id} imetumwa. Malipo yatasubiri uthibitisho wa admin.`
+          : `Oda #${newOrder.id} imeundwa; utalipa unapopokea.`,
+        'success',
+        4000
+      );
       setActiveView('my_orders');
-    }, 1500);
+    } catch (error) {
+      showToast(error.message || 'Imeshindikana kutuma oda. Jaribu tena.', 'error');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleCancel = () => {
@@ -131,7 +106,7 @@ export const PaymentBill = () => {
             <span>My Bills (Ukurasa wa Bili & Malipo)</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Confirm payment. Choose method of payment.
+            Chagua mtandao wa simu, tuma malipo kwa namba ya biashara, au ulipe taslimu unapopokea.
           </p>
         </div>
 
@@ -148,11 +123,11 @@ export const PaymentBill = () => {
       <form onSubmit={handlePayNow} className="space-y-6">
         {/* Method Selector Tabs (Sketch Page 6: M-PESA Box & VISA/Mastercard Box) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* BOX 1: M-PESA (Vodacom) - Lipa kwa simu (Sketch Page 6) */}
+          {/* Mobile money manual payment */}
           <div
-            onClick={() => setPaymentMethod('mpesa')}
+            onClick={() => setPaymentMethod((previous) => previous === 'cash' ? 'tigo' : previous)}
             className={`p-5 rounded-3xl border-2 transition-all cursor-pointer relative flex flex-col justify-between ${
-              paymentMethod === 'mpesa'
+              paymentMethod !== 'cash'
                 ? 'bg-amber-50/50 border-amber-500 shadow-md shadow-amber-500/10'
                 : 'bg-white border-slate-200 hover:border-slate-300'
             }`}
@@ -161,14 +136,14 @@ export const PaymentBill = () => {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <div className="w-9 h-9 rounded-xl bg-red-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
-                    M
+                    T
                   </div>
                   <div>
                     <h2 className="text-sm font-black text-slate-900 leading-tight">
-                      M-PESA (Vodacom)
+                      Malipo ya simu
                     </h2>
                     <span className="text-xs font-bold text-amber-600">
-                      Lipa kwa simu
+                      Malipo ya moja kwa moja (manual)
                     </span>
                   </div>
                 </div>
@@ -176,58 +151,62 @@ export const PaymentBill = () => {
                 <input
                   type="radio"
                   name="payment_choice"
-                  checked={paymentMethod === 'mpesa'}
-                  onChange={() => setPaymentMethod('mpesa')}
+                  checked={paymentMethod !== 'cash'}
+                  onChange={() => setPaymentMethod('tigo')}
                   className="w-4 h-4 text-amber-600"
                 />
               </div>
 
-              {/* Provider Buttons */}
-              <div className="grid grid-cols-3 gap-1.5 mb-4">
-                {[
-                  { id: 'vodacom', label: 'Vodacom (M-Pesa)' },
-                  { id: 'tigo', label: 'Tigo (Pesa)' },
-                  { id: 'airtel', label: 'Airtel Money' },
-                ].map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setMobileProvider(p.id);
-                      setPaymentMethod('mpesa');
-                    }}
-                    className={`py-1.5 px-2 rounded-xl text-[11px] font-bold border transition-all ${
-                      mobileProvider === p.id && paymentMethod === 'mpesa'
-                        ? 'bg-red-600 text-white border-red-600 shadow-xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Phone Input matching sketch: Namba ya simu. (255) [________] */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700">
-                  Namba ya simu:
-                </label>
-                <div className="flex items-center rounded-2xl bg-white border border-slate-300 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500">
-                  <span className="px-3.5 py-2.5 bg-slate-100 text-xs font-black text-slate-700 border-r border-slate-200">
-                    (255)
-                  </span>
+              <div className="space-y-3 text-xs text-slate-700">
+                <div className="grid grid-cols-2 gap-2">
+                  {MOBILE_MONEY_PROVIDERS.map((provider) => (
+                    <button
+                      key={provider.id}
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setPaymentMethod(provider.id);
+                      }}
+                      className={`rounded-xl border px-3 py-2 font-bold ${
+                        paymentMethod === provider.id
+                          ? 'border-amber-600 bg-amber-500 text-white'
+                          : 'border-slate-200 bg-white text-slate-700'
+                      }`}
+                    >
+                      {provider.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="rounded-xl bg-white p-3 border border-slate-200">
+                  Tuma <strong>TSh {formatTsh(grandTotal)}</strong> kupitia {MOBILE_MONEY_PROVIDERS.find((provider) => provider.id === paymentMethod)?.label} kwenda namba
+                  <strong className="ml-1 text-base text-slate-900">0657281070</strong>.
+                  Chagua huduma ya kutuma kwenda mitandao mingine, na thibitisha jina la mpokeaji ni Holland Restaurant. Namba hii ni ya Tigo Pesa.
+                </p>
+                <label className="block font-bold">
+                  Namba yako ya {MOBILE_MONEY_PROVIDERS.find((provider) => provider.id === paymentMethod)?.label}:
                   <input
                     type="tel"
                     value={mobilePhone}
-                    onChange={(e) => setMobilePhone(e.target.value.replace(/\D/g, ''))}
-                    placeholder="712 345 678"
+                    onChange={(event) => setMobilePhone(event.target.value.replace(/\D/g, ''))}
+                    placeholder="712345678"
                     maxLength={9}
-                    className="flex-1 px-3 py-2 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none"
+                    className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-normal"
                   />
-                </div>
-                <p className="text-[10px] text-slate-400">
-                  Utapokea ujumbe kwenye simu yako kuthibitisha nenosiri la M-PESA.
+                </label>
+                <label className="block font-bold">
+                  Transaction ID (kutoka kwenye SMS ya malipo):
+                  <input
+                    type="text"
+                    value={paymentReference}
+                    onChange={(event) => setPaymentReference(event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 40))}
+                    placeholder="Andika transaction ID iliyo kwenye SMS"
+                    maxLength={40}
+                    required={paymentMethod !== 'cash'}
+                    className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-normal uppercase"
+                  />
+                </label>
+                <p className="text-amber-800">
+                  Hii ni manual: oda itasubiri admin athibitishe muamala. Cross-network transfer itumie tu ikiwa huduma yako inaruhusu; usitumie transaction ID ya kubuni.
                 </p>
               </div>
             </div>
@@ -236,37 +215,37 @@ export const PaymentBill = () => {
             <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
               <span
                 className={`text-xs font-bold px-3 py-1 rounded-xl ${
-                  paymentMethod === 'mpesa'
+                  paymentMethod !== 'cash'
                     ? 'bg-amber-500 text-white'
                     : 'bg-slate-100 text-slate-600'
                 }`}
               >
-                {paymentMethod === 'mpesa' ? 'Imechaguliwa ✓' : 'Chagua'}
+                {paymentMethod !== 'cash' ? `${MOBILE_MONEY_PROVIDERS.find((provider) => provider.id === paymentMethod)?.label} imechaguliwa ✓` : 'Chagua'}
               </span>
             </div>
           </div>
 
-          {/* BOX 2: VISA / MASTERCARD - Lipa kwa kadi ya Benki (Sketch Page 6) */}
+          {/* Cash on delivery */}
           <div
-            onClick={() => setPaymentMethod('card')}
+            onClick={() => setPaymentMethod('cash')}
             className={`p-5 rounded-3xl border-2 transition-all cursor-pointer relative flex flex-col justify-between ${
-              paymentMethod === 'card'
-                ? 'bg-blue-50/50 border-blue-600 shadow-md shadow-blue-600/10'
+              paymentMethod === 'cash'
+                ? 'bg-emerald-50/50 border-emerald-600 shadow-md shadow-emerald-600/10'
                 : 'bg-white border-slate-200 hover:border-slate-300'
             }`}
           >
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-blue-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
-                    <CreditCard className="w-5 h-5" />
+                  <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
+                    <Smartphone className="w-5 h-5" />
                   </div>
                   <div>
                     <h2 className="text-sm font-black text-slate-900 leading-tight">
-                      VISA / MASTERCARD
+                      Lipa unapopokea
                     </h2>
-                    <span className="text-xs font-bold text-blue-600">
-                      Lipa kwa kadi ya Benki
+                    <span className="text-xs font-bold text-emerald-700">
+                      Cash on Delivery
                     </span>
                   </div>
                 </div>
@@ -274,66 +253,26 @@ export const PaymentBill = () => {
                 <input
                   type="radio"
                   name="payment_choice"
-                  checked={paymentMethod === 'card'}
-                  onChange={() => setPaymentMethod('card')}
-                  className="w-4 h-4 text-blue-600"
+                  checked={paymentMethod === 'cash'}
+                  onChange={() => setPaymentMethod('cash')}
+                  className="w-4 h-4 text-emerald-600"
                 />
               </div>
 
-              {/* Inputs matching sketch: Namba ya kadi, Tarehe (mm/yy), CVV */}
-              <div className="space-y-2.5">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Namba ya kadi:
-                  </label>
-                  <input
-                    type="text"
-                    value={cardNumber}
-                    onChange={(e) => setCardNumber(e.target.value)}
-                    placeholder="4111 2222 3333 4444"
-                    className="w-full px-3.5 py-2 rounded-2xl bg-white border border-slate-300 text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Tarehe (mm/yy):
-                    </label>
-                    <input
-                      type="text"
-                      value={cardExpiry}
-                      onChange={(e) => setCardExpiry(e.target.value)}
-                      placeholder="12/28"
-                      className="w-full px-3.5 py-2 rounded-2xl bg-white border border-slate-300 text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      CVV:
-                    </label>
-                    <input
-                      type="password"
-                      value={cardCvv}
-                      onChange={(e) => setCardCvv(e.target.value)}
-                      maxLength={4}
-                      placeholder="•••"
-                      className="w-full px-3.5 py-2 rounded-2xl bg-white border border-slate-300 text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    />
-                  </div>
-                </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600">
+                Lipa fedha taslimu kwa delivery staff baada ya oda kufikishwa.
               </div>
             </div>
 
             <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
               <span
                 className={`text-xs font-bold px-3 py-1 rounded-xl ${
-                  paymentMethod === 'card'
-                    ? 'bg-blue-600 text-white'
+                  paymentMethod === 'cash'
+                    ? 'bg-emerald-600 text-white'
                     : 'bg-slate-100 text-slate-600'
                 }`}
               >
-                {paymentMethod === 'card' ? 'Imechaguliwa ✓' : 'Chagua'}
+                {paymentMethod === 'cash' ? 'Imechaguliwa ✓' : 'Chagua'}
               </span>
             </div>
           </div>
@@ -373,8 +312,8 @@ export const PaymentBill = () => {
           </div>
 
           <div className="flex justify-between items-center text-sm font-bold text-slate-700">
-            <span>Ada ya Muamala: (Itahasabiwa)</span>
-            <span className="font-black text-slate-900">TSh {formatTsh(transactionFee)}</span>
+            <span>Ada ya malipo ya mtandaoni:</span>
+            <span className="font-black text-slate-900">Hakuna</span>
           </div>
 
           <div className="pt-3 border-t-2 border-dashed border-slate-200 flex justify-between items-center">
@@ -391,7 +330,7 @@ export const PaymentBill = () => {
             </span>
           </div>
 
-          {/* Action Buttons (Sketch Page 6: [LIPA SASA] [Batilisha]) */}
+          {/* Submit the order or return to the menu */}
           <div className="pt-4 flex flex-col sm:flex-row gap-3">
             <button
               type="submit"
@@ -403,11 +342,11 @@ export const PaymentBill = () => {
               }`}
             >
               {isProcessing ? (
-                <span>Inashughulikia Malipo...</span>
+                <span>Inatuma oda...</span>
               ) : (
                 <>
                   <ShieldCheck className="w-5 h-5" />
-                  <span>LIPA SASA</span>
+                  <span>{paymentMethod !== 'cash' ? 'NIMELIPA / WEKA ODA' : 'WEKA ODA'}</span>
                 </>
               )}
             </button>

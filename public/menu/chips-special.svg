@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="title desc">
+  <title id="title">Chips za Holland</title>
+  <desc id="desc">Kikapu cha chips za dhahabu pamoja na ketchup na kachumbari.</desc>
+  <defs>
+    <linearGradient id="background" x2="0" y2="1">
+      <stop stop-color="#fff4dc"/>
+      <stop offset="1" stop-color="#f4c77e"/>
+    </linearGradient>
+    <linearGradient id="fries" x2="0" y2="1">
+      <stop stop-color="#ffe88a"/>
+      <stop offset="1" stop-color="#e99a25"/>
+    </linearGradient>
+    <linearGradient id="box" x2="0" y2="1">
+      <stop stop-color="#e94d36"/>
+      <stop offset="1" stop-color="#a92722"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" rx="38" fill="url(#background)"/>
+  <ellipse cx="401" cy="482" rx="260" ry="43" fill="#8f551d" opacity=".16"/>
+  <g transform="rotate(-7 390 320)">
+    <path d="M210 165l60 242h256l58-242-71 38-57-43-63 42-61-43-61 43z" fill="url(#fries)" stroke="#ce791b" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M263 365h270l-27 136H291z" fill="url(#box)" stroke="#9f2a21" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M315 411h166l-8 41H323z" fill="#ffdb85" opacity=".9"/>
+    <text x="398" y="441" text-anchor="middle" font-family="Arial,sans-serif" font-size="25" font-weight="800" fill="#a82c22">HOLLAND</text>
+    <g fill="#fff1ae" stroke="#d88b24" stroke-width="5" stroke-linejoin="round">
+      <path d="M246 133l39-13 91 242-40 14z"/>
+      <path d="M300 107l40-8 51 249-41 8z"/>
+      <path d="M361 99h41v253h-41z"/>
+      <path d="M426 108l40 9-49 241-41-9z"/>
+      <path d="M489 128l39 14-87 240-40-14z"/>
+      <path d="M551 165l36 20-125 218-37-21z"/>
+    </g>
+  </g>
+  <circle cx="621" cy="195" r="54" fill="#fff" opacity=".88"/>
+  <path d="M591 197c18-35 51-40 67-22-7 31-32 49-67 40z" fill="#d83e2e"/>
+  <path d="M598 209c12-16 28-24 45-26" fill="none" stroke="#ffb59e" stroke-width="7" stroke-linecap="round"/>
+  <g fill="#538b42">
+    <circle cx="176" cy="455" r="22"/><circle cx="208" cy="468" r="17"/><circle cx="166" cy="483" r="15"/>
+  </g>
+  <g fill="#e6503b">
+    <circle cx="177" cy="455" r="8"/><circle cx="208" cy="468" r="7"/><circle cx="166" cy="483" r="6"/>
+  </g>
+</svg>

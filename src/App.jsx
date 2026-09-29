@@ -83,7 +83,7 @@ const MainApp = () => {
             <span>•</span>
             <span>Phone:📞 0657281070</span>
             <span>•</span>
-            <span className="text-emerald-600 font-semibold">Lipa kwa M-PESA / Card</span>
+            <span className="text-emerald-600 font-semibold">Malipo ya Simu</span>
           </div>
         </div>
       </footer>

@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { User, Camera, Lock, Save, CheckCircle2 } from 'lucide-react';
+import { Camera, Lock, Save } from 'lucide-react';
 
 export const PersonalInformation = () => {
   const { currentUser, updateProfile } = useAuth();
   const { showToast } = useToast();
+  const avatarInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     username: currentUser?.username || '@customer',
@@ -24,17 +25,57 @@ export const PersonalInformation = () => {
 
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleAvatarChange = () => {
-    // Alternate sample avatars for quick testing
-    const avatars = [
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80',
-    ];
-    const nextAvatar = avatars[(avatars.indexOf(formData.avatar) + 1) % avatars.length];
-    setFormData({ ...formData, avatar: nextAvatar });
-    showToast('Picha ya wasifu imebadilishwa!', 'info', 2000);
+  const handleAvatarChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Chagua faili la picha.', 'error');
+      return;
+    }
+
+    if (file.size > 8 * 1024 * 1024) {
+      showToast('Picha ni kubwa sana. Chagua picha isiyozidi 8 MB.', 'error');
+      return;
+    }
+
+    let bitmap;
+    try {
+      bitmap = await createImageBitmap(file);
+      const maxSize = 600;
+      const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Kifaa cha picha hakipatikani');
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      bitmap = null;
+
+      const compressedImage = await new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Picha haikuweza kuchakatwa'));
+        }, 'image/jpeg', 0.8);
+      });
+
+      const avatar = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Picha haikuweza kusomwa'));
+        reader.readAsDataURL(compressedImage);
+      });
+
+      setFormData((previous) => ({ ...previous, avatar }));
+      showToast('Picha imebadilishwa. Bonyeza SAVE ili kuihifadhi.', 'success');
+    } catch (error) {
+      console.error('Unable to process profile image:', error);
+      showToast(error.message || 'Imeshindikana kusoma picha.', 'error');
+    } finally {
+      bitmap?.close();
+    }
   };
 
   const handleSubmit = (e) => {
@@ -53,8 +94,12 @@ export const PersonalInformation = () => {
 
     setIsSaving(true);
     setTimeout(() => {
-      updateProfile(formData);
+      const result = updateProfile(formData);
       setIsSaving(false);
+      if (!result.success) {
+        showToast(result.message || 'Imeshindikana kuhifadhi taarifa.', 'error');
+        return;
+      }
       setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
       showToast('Taarifa binafsi (Personal Information) zimehifadhiwa kikamilifu!', 'success');
     }, 600);
@@ -92,7 +137,7 @@ export const PersonalInformation = () => {
             </div>
             <button
               type="button"
-              onClick={handleAvatarChange}
+              onClick={() => avatarInputRef.current?.click()}
               className="absolute bottom-0 right-0 p-2 bg-amber-500 hover:bg-amber-600 text-white rounded-full shadow-md transition-all"
               title="Change Profile"
             >
@@ -105,11 +150,19 @@ export const PersonalInformation = () => {
           </span>
           <button
             type="button"
-            onClick={handleAvatarChange}
+            onClick={() => avatarInputRef.current?.click()}
             className="text-xs font-bold text-amber-600 hover:text-amber-700 hover:underline"
           >
-            Change profile (Bofya kubadilisha picha)
+            Change profile (Chagua picha kutoka kwenye kifaa)
           </button>
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarChange}
+            className="hidden"
+            aria-label="Chagua picha ya wasifu"
+          />
         </div>
 
         {/* Inputs (Sketch Page 7: @Username, Full name, Email, Phone, Address) */}

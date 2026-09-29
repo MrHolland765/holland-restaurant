@@ -1,5 +1,6 @@
 import React from 'react';
-import { UtensilsCrossed, Phone, MapPin, Mail, Clock, ShieldCheck, Heart } from 'lucide-react';
+import { Phone, MapPin, Mail, Clock, ShieldCheck, Heart } from 'lucide-react';
+import { RestaurantLogo } from '../common/RestaurantLogo';
 
 export const OthersPage = () => {
   return (
@@ -7,9 +8,7 @@ export const OthersPage = () => {
       {/* Header */}
       <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-sm">
-            <UtensilsCrossed className="w-5 h-5" />
-          </div>
+          <RestaurantLogo className="w-14 h-14 border border-amber-200 shadow-sm" />
           <div>
             <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
               Kuhusu Sisi (About Us)

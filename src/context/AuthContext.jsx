@@ -168,15 +168,29 @@ export const AuthProvider = ({ children }) => {
   // =========================
 
   const updateProfile = (updatedFields) => {
+    if (!currentUser) {
+      return {
+        success: false,
+        message: 'Hakuna akaunti iliyoingia kwa sasa.',
+      };
+    }
 
-    setCurrentUser((prev) => ({
-      ...prev,
+    const updatedUser = {
+      ...currentUser,
       ...updatedFields,
-    }));
-
-    return {
-      success: true,
     };
+
+    try {
+      localStorage.setItem('holland_user', JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to save profile to local storage:', error);
+      return {
+        success: false,
+        message: 'Imeshindikana kuhifadhi picha au taarifa. Jaribu picha ndogo zaidi.',
+      };
+    }
   };
 
 

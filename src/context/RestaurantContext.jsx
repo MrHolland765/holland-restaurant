@@ -7,8 +7,6 @@ import React, {
 
 import {
   INITIAL_MENU_ITEMS,
-  INITIAL_ORDERS,
-  DELIVERY_STAFF,
 } from '../data/mockData';
 
 import {
@@ -17,11 +15,18 @@ import {
   getProducts,
   updateProduct,
   getDeliveryStaff,
+  getOrders,
+  createOrder as createOrderRequest,
+  updateOrder as updateOrderRequest,
+  assignOrder as assignOrderRequest,
+  confirmOrderPayment as confirmOrderPaymentRequest,
 } from '../API';
+import { useAuth } from './AuthContext';
 
 const RestaurantContext = createContext(null);
 
 export const RestaurantProvider = ({ children }) => {
+  const { currentUser, currentRole, isAuthenticated } = useAuth();
 
   const formatProduct = (product) => ({
     id: product.id,
@@ -89,15 +94,16 @@ export const RestaurantProvider = ({ children }) => {
     loadProducts();
   }, []);
 
-  const [orders, setOrders] = useState(() => {
-    const saved = localStorage.getItem(
-      'holland_orders'
-    );
-
-    return saved
-      ? JSON.parse(saved)
-      : INITIAL_ORDERS;
+  const ownerKey = isAuthenticated && currentUser?.id
+    ? `${currentRole}:${currentUser.id}`
+    : null;
+  const [ordersState, setOrdersState] = useState({
+    ownerKey: null,
+    records: [],
   });
+  const orders = ordersState.ownerKey === ownerKey
+    ? ordersState.records
+    : [];
 
   const [cart, setCart] = useState(() => {
     const saved = localStorage.getItem(
@@ -187,11 +193,30 @@ export const RestaurantProvider = ({ children }) => {
   }, [menuItems]);
 
   useEffect(() => {
-    localStorage.setItem(
-      'holland_orders',
-      JSON.stringify(orders)
-    );
-  }, [orders]);
+    localStorage.removeItem('holland_orders');
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    if (!ownerKey) return () => { active = false; };
+
+    getOrders()
+      .then((loadedOrders) => {
+        if (active) {
+          setOrdersState({
+            ownerKey,
+            records: loadedOrders,
+          });
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load orders:', error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [ownerKey]);
 
   useEffect(() => {
     localStorage.setItem(
@@ -284,117 +309,53 @@ export const RestaurantProvider = ({ children }) => {
     setCart([]);
   };
 
-  const createOrder = ({
+  const createOrder = async ({
     paymentMethod,
     paymentPhone,
+    paymentReference,
     specialNotes = '',
-    customer,
   }) => {
-    const now = new Date();
-
-    const dateStr =
-      now.toLocaleDateString('en-GB');
-
-    const timeStr =
-      now.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-
-    const newOrder = {
-      id: `ORD-${Math.floor(
-        100 + Math.random() * 900
-      )}`,
-
-      orderNumber:
-        orders.length + 1,
-
-      customerName:
-        customer?.fullName ||
-        'Holland Customer',
-
-      customerUsername:
-        customer?.username ||
-        '@customer',
-
-      customerPhone:
-        paymentPhone ||
-        customer?.phone ||
-        '0712 345 678',
-
-      customerAddress:
-        customer?.address ||
-        'Mikocheni B, Dar es Salaam',
-
-      date: dateStr,
-      time: timeStr,
-
-      category:
-        cart[0]?.category ||
-        'Foods',
-
-      status: 'Pending',
-
-      assignedTo: 'Unassigned',
-
-      deliveryPhone: '',
-
+    const newOrder = await createOrderRequest({
       paymentMethod:
         paymentMethod ||
         'M-PESA (Vodacom)',
-
       paymentPhone:
         paymentPhone || '',
-
-      paymentStatus:
-        paymentMethod
-          ?.toLowerCase()
-          .includes('cash')
-          ? 'Pending (Cash)'
-          : 'Paid',
-
+      paymentReference: paymentReference || '',
       items: [...cart],
-
       subtotal: cartSubtotal,
-
       fee: cartFee,
-
       total: cartTotal,
-
       specialNotes,
-    };
+    });
 
-    setOrders((prev) => [
-      newOrder,
-      ...prev,
-    ]);
+    setOrdersState((prev) => prev.ownerKey === ownerKey
+      ? { ...prev, records: [newOrder, ...prev.records] }
+      : prev);
 
     clearCart();
 
     return newOrder;
   };
 
-  const updateOrderStatus = (
+  const updateOrderStatus = async (
     orderId,
     newStatus,
     extra = {}
   ) => {
-    setOrders((prev) =>
-      prev.map((order) => {
-        if (order.id === orderId) {
-          return {
-            ...order,
-            status: newStatus,
-            ...extra,
-          };
+    const updatedOrder = await updateOrderRequest(orderId, {
+      status: newStatus,
+      ...extra,
+    });
+    setOrdersState((prev) => prev.ownerKey === ownerKey
+      ? {
+          ...prev,
+          records: prev.records.map((order) => order.id === orderId ? updatedOrder : order),
         }
-
-        return order;
-      })
-    );
+      : prev);
   };
 
-  const assignOrderToStaff = (
+  const assignOrderToStaff = async (
     orderId,
     staffId
   ) => {
@@ -405,25 +366,14 @@ export const RestaurantProvider = ({ children }) => {
           String(staffId)
       );
 
-    if (!staffMember) return;
-
-    setOrders((prev) =>
-      prev.map((order) => {
-        if (order.id === orderId) {
-          return {
-            ...order,
-            assignedTo:
-              staffMember.name,
-            deliveryPhone:
-              staffMember.phone,
-            status:
-              'Out for Delivery',
-          };
+    if (!staffMember) throw new Error('Delivery staff hajapatikana');
+    const updatedOrder = await assignOrderRequest(orderId, staffId);
+    setOrdersState((prev) => prev.ownerKey === ownerKey
+      ? {
+          ...prev,
+          records: prev.records.map((order) => order.id === orderId ? updatedOrder : order),
         }
-
-        return order;
-      })
-    );
+      : prev);
 
     setDeliveryStaff((prev) =>
       prev.map((s) =>
@@ -441,19 +391,21 @@ export const RestaurantProvider = ({ children }) => {
     );
   };
 
-  const cancelOrder = (
+  const confirmOrderPayment = async (orderId) => {
+    const updatedOrder = await confirmOrderPaymentRequest(orderId);
+    setOrdersState((prev) => prev.ownerKey === ownerKey
+      ? {
+          ...prev,
+          records: prev.records.map((order) => order.id === orderId ? updatedOrder : order),
+        }
+      : prev);
+    return updatedOrder;
+  };
+
+  const cancelOrder = async (
     orderId
   ) => {
-    setOrders((prev) =>
-      prev.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              status: 'Cancelled',
-            }
-          : order
-      )
-    );
+    await updateOrderStatus(orderId, 'Cancelled');
   };
 
   const addMenuItem = async (
@@ -554,18 +506,10 @@ export const RestaurantProvider = ({ children }) => {
       INITIAL_MENU_ITEMS
     );
 
-    setOrders(
-      INITIAL_ORDERS
-    );
-
     refreshDeliveryStaff();
 
     localStorage.removeItem(
       'holland_menu'
-    );
-
-    localStorage.removeItem(
-      'holland_orders'
     );
 
     localStorage.removeItem(
@@ -602,6 +546,7 @@ export const RestaurantProvider = ({ children }) => {
         createOrder,
         updateOrderStatus,
         assignOrderToStaff,
+        confirmOrderPayment,
         cancelOrder,
         addMenuItem,
         updateMenuItem,

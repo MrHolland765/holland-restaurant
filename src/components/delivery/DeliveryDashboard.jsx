@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { RestaurantLogo } from '../common/RestaurantLogo';
 import {
   Bike,
   MapPin,
@@ -32,9 +33,13 @@ export const DeliveryDashboard = () => {
 
   const completedOrders = orders.filter((o) => o.status === 'Delivered');
 
-  const handleAdvanceStatus = (order, nextStatus, label) => {
-    updateOrderStatus(order.id, nextStatus);
-    showToast(`Oda #${order.id} imebadilishwa kuwa: ${label}!`, 'success');
+  const handleAdvanceStatus = async (order, nextStatus, label) => {
+    try {
+      await updateOrderStatus(order.id, nextStatus);
+      showToast(`Oda #${order.id} imebadilishwa kuwa: ${label}!`, 'success');
+    } catch (error) {
+      showToast(error.message || 'Imeshindikana kusasisha oda', 'error');
+    }
   };
 
   return (
@@ -44,6 +49,7 @@ export const DeliveryDashboard = () => {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="p-1.5 bg-emerald-500/20 text-emerald-300 rounded-lg border border-emerald-500/30 text-xs font-bold flex items-center gap-1">
+              <RestaurantLogo className="w-8 h-8 border border-amber-300" />
               <Bike className="w-3.5 h-3.5" />
               <span>Holland Express Delivery</span>
             </span>

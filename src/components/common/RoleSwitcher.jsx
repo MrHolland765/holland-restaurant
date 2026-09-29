@@ -2,6 +2,7 @@ import React from 'react';
 import { Languages, LogOut, Shield, UserRound, Bike } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { RestaurantLogo } from './RestaurantLogo';
 
 const roleIcon = { customer: UserRound, admin: Shield, delivery: Bike };
 
@@ -13,6 +14,7 @@ export const RoleSwitcher = () => {
   return (
     <aside aria-label="System controls" className="bg-slate-900 text-white border-b border-slate-800 px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm">
       <div className="flex items-center gap-2">
+        <RestaurantLogo className="w-9 h-9 border border-amber-400" />
         <span className="font-semibold tracking-wide text-amber-400 uppercase flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           Holland Restaurant

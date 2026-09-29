@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { UtensilsCrossed, ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
+import { RestaurantLogo } from '../common/RestaurantLogo';
 
 export const AuthPage = ({ onComplete }) => {
   const { login, register } = useAuth();
@@ -113,9 +114,7 @@ if (onComplete) {
             <option value="sw" className="text-slate-900">Kiswahili</option>
             <option value="en" className="text-slate-900">English</option>
           </select>
-          <div className="w-14 h-14 bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-3 border border-white/20 shadow-inner">
-            <UtensilsCrossed className="w-8 h-8 text-white" />
-          </div>
+          <RestaurantLogo className="w-16 h-16 mx-auto mb-3 border-2 border-amber-300 shadow-md" />
           <h1 className="text-xl sm:text-2xl font-black tracking-tight uppercase">
             {isEnglish ? 'Welcome to Our Restaurant' : 'Karibu kwenye Mkahawa Wetu'}
           </h1>

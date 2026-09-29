@@ -1,7 +1,8 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useRestaurant } from '../../context/RestaurantContext';
-import { Menu, ShoppingCart, Search, UtensilsCrossed, User } from 'lucide-react';
+import { Menu, ShoppingCart, Search, User } from 'lucide-react';
+import { RestaurantLogo } from '../common/RestaurantLogo';
 
 export const CustomerNavbar = () => {
   const { currentUser } = useAuth();
@@ -32,9 +33,7 @@ export const CustomerNavbar = () => {
             onClick={() => setActiveView('dashboard')}
             className="flex items-center gap-2 cursor-pointer select-none group"
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-sm shadow-amber-500/30 group-hover:scale-105 transition-transform">
-              <UtensilsCrossed className="w-5 h-5" />
-            </div>
+            <RestaurantLogo className="w-10 h-10 border border-amber-200 shadow-sm group-hover:scale-105 transition-transform" />
             <div>
               <span className="block text-[10px] uppercase tracking-widest text-slate-400 font-bold leading-none">
                 Our Restaurant

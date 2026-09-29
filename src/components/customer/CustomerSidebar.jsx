@@ -15,6 +15,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import { RestaurantLogo } from '../common/RestaurantLogo';
 
 export const CustomerSidebar = () => {
   const { sidebarOpen, setSidebarOpen, activeView, setActiveView, orders, cartCount } = useRestaurant();
@@ -92,13 +93,16 @@ export const CustomerSidebar = () => {
       <div className="relative w-80 max-w-[85vw] bg-white h-full shadow-2xl flex flex-col z-10 animate-fade-in">
         {/* Drawer Header (Sketch: MENU: [X]) */}
         <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-amber-500/10">
-          <div>
-            <span className="text-[10px] uppercase tracking-wider font-bold text-amber-700">
-              Holland Restaurant
-            </span>
-            <h2 className="text-lg font-black text-slate-900 tracking-tight">
-              MENU:
-            </h2>
+          <div className="flex items-center gap-3">
+            <RestaurantLogo className="w-12 h-12 border border-amber-200" />
+            <div>
+              <span className="text-[10px] uppercase tracking-wider font-bold text-amber-700">
+                Holland Restaurant
+              </span>
+              <h2 className="text-lg font-black text-slate-900 tracking-tight">
+                MENU:
+              </h2>
+            </div>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}

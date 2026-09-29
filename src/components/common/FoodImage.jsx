@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Utensils, Coffee, Pizza, Soup } from 'lucide-react';
 
 export const FoodImage = ({ src, alt, category, className = '' }) => {
   const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [src]);
 
   if (hasError || !src) {
     const isDrink = category?.toLowerCase() === 'drinks';

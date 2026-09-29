@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="title desc">
+  <title id="title">Juisi ya parachichi kwenye glass</title>
+  <desc id="desc">Glass ndefu yenye juisi laini ya parachichi na vipande vya parachichi fresh.</desc>
+  <defs>
+    <linearGradient id="background" x2="0" y2="1">
+      <stop stop-color="#e8f4cf"/>
+      <stop offset="1" stop-color="#b7d886"/>
+    </linearGradient>
+    <linearGradient id="juice" x2="0" y2="1">
+      <stop stop-color="#c8dc79"/>
+      <stop offset="1" stop-color="#789c37"/>
+    </linearGradient>
+    <linearGradient id="glass" x2="1" y2="0">
+      <stop stop-color="#fff" stop-opacity=".36"/>
+      <stop offset=".18" stop-color="#fff" stop-opacity=".8"/>
+      <stop offset=".42" stop-color="#fff" stop-opacity=".1"/>
+      <stop offset=".82" stop-color="#fff" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#fff" stop-opacity=".8"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" rx="38" fill="url(#background)"/>
+  <circle cx="160" cy="125" r="68" fill="#fff" opacity=".22"/>
+  <circle cx="680" cy="440" r="96" fill="#fff" opacity=".18"/>
+  <ellipse cx="405" cy="495" rx="180" ry="28" fill="#4e642e" opacity=".18"/>
+  <g transform="rotate(8 413 280)">
+    <path d="M475 115l99-90" fill="none" stroke="#8a4b35" stroke-width="18" stroke-linecap="round"/>
+    <path d="M283 153h256l-29 302a33 33 0 0 1-33 30H344a33 33 0 0 1-33-30z" fill="url(#glass)" stroke="#f9fff0" stroke-width="12"/>
+    <path d="M298 250h227l-19 205a21 21 0 0 1-21 19H345a21 21 0 0 1-21-19z" fill="url(#juice)"/>
+    <ellipse cx="411" cy="250" rx="113" ry="26" fill="#d6e99c"/>
+    <path d="M333 276l-15 161" stroke="#fff" stroke-width="14" stroke-linecap="round" opacity=".7"/>
+    <path d="M363 282l-8 117" stroke="#eff8d9" stroke-width="5" stroke-linecap="round" opacity=".75"/>
+    <circle cx="466" cy="313" r="11" fill="#e8f0bd" opacity=".8"/>
+    <circle cx="430" cy="362" r="8" fill="#e8f0bd" opacity=".8"/>
+    <circle cx="478" cy="411" r="9" fill="#e8f0bd" opacity=".8"/>
+  </g>
+  <g transform="rotate(-18 205 370)">
+    <path d="M132 410c-17-93 29-172 106-199 77 27 123 106 106 199-42 46-170 46-212 0z" fill="#467d3a"/>
+    <path d="M151 400c-10-72 22-131 87-157 65 26 97 85 87 157-36 31-138 31-174 0z" fill="#d3e58b"/>
+    <ellipse cx="238" cy="368" rx="36" ry="45" fill="#8e542f"/>
+    <ellipse cx="225" cy="354" rx="10" ry="13" fill="#c2844b" opacity=".8"/>
+    <path d="M161 399c19 17 47 26 78 26" fill="none" stroke="#eff4bc" stroke-width="9" stroke-linecap="round"/>
+  </g>
+  <path d="M583 155c23-21 50-23 72-6-20 21-46 27-72 6z" fill="#467d3a"/>
+  <path d="M588 155l58-2" stroke="#d9edaa" stroke-width="5" stroke-linecap="round"/>
+  <text x="400" y="548" text-anchor="middle" font-family="Arial,sans-serif" font-size="27" font-weight="800" letter-spacing="3" fill="#35552d">AVOCADO FRESH</text>
+</svg>

@@ -18,6 +18,7 @@ import {
   Eye,
 } from 'lucide-react';
 
+import { RestaurantLogo } from "../common/RestaurantLogo";
 import { useRestaurant } from "../../context/RestaurantContext";
 
 import {
@@ -37,6 +38,7 @@ const AdminDashboard = () => {
     deleteMenuItem,
     toggleStock,
     assignOrderToStaff,
+    confirmOrderPayment,
   } = useRestaurant();
 
 
@@ -469,7 +471,7 @@ const handleDeleteDelivery = async (id) => {
   // ASSIGN ORDER
   // ===============================
 
-  const handleAssignOrder = (
+  const handleAssignOrder = async (
     orderId
   ) => {
 
@@ -483,17 +485,32 @@ const handleDeleteDelivery = async (id) => {
       return;
     }
 
-    assignOrderToStaff(
-      orderId,
-      selectedStaffId
-    );
+    try {
+      await assignOrderToStaff(
+        orderId,
+        selectedStaffId
+      );
+      showToast(
+        'Order imepewa Delivery Staff',
+        'success'
+      );
+      setSelectedOrder(null);
+    } catch (error) {
+      showToast(error.message || 'Imeshindikana kumpa oda delivery staff', 'error');
+    }
+  };
 
-    showToast(
-      'Order imepewa Delivery Staff',
-      'success'
-    );
-
-    setSelectedOrder(null);
+  const handleConfirmPayment = async (orderId) => {
+    if (!window.confirm('Je, umethibitisha kwenye Tigo Pesa kuwa muamala huu na kiasi cha oda vimepokelewa?')) {
+      return;
+    }
+    try {
+      const updated = await confirmOrderPayment(orderId);
+      setSelectedOrder(updated);
+      showToast('Malipo yamethibitishwa kikamilifu.', 'success');
+    } catch (error) {
+      showToast(error.message || 'Imeshindikana kuthibitisha malipo.', 'error');
+    }
   };
 
 
@@ -580,14 +597,17 @@ const handleDeleteDelivery = async (id) => {
 
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Admin Dashboard
-          </h1>
+        <div className="flex items-center gap-3">
+          <RestaurantLogo className="w-14 h-14 border border-amber-200 shadow-sm" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Admin Dashboard
+            </h1>
 
-          <p className="text-sm text-gray-500">
-            Holland Restaurant Management
-          </p>
+            <p className="text-sm text-gray-500">
+              Holland Restaurant Management
+            </p>
+          </div>
         </div>
 
 
@@ -822,6 +842,13 @@ const handleDeleteDelivery = async (id) => {
 
                       <span className="rounded-full bg-gray-100 px-3 py-1 text-xs">
                         {order.status}
+                      </span>
+                      <span className={`rounded-full px-3 py-1 text-xs ${
+                        order.paymentStatus === 'Paid'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-amber-100 text-amber-900'
+                      }`}>
+                        {order.paymentStatus}
                       </span>
 
                     </div>
@@ -1629,6 +1656,27 @@ const handleDeleteDelivery = async (id) => {
                 ).toLocaleString()}
               </p>
 
+              <p>
+                <strong>Payment:</strong>{' '}
+                {selectedOrder.paymentMethod} — {selectedOrder.paymentStatus}
+              </p>
+
+              {selectedOrder.paymentReference && (
+                <p>
+                  <strong>Mobile money Transaction ID:</strong>{' '}
+                  {selectedOrder.paymentReference}
+                </p>
+              )}
+
+              {selectedOrder.paymentStatus === 'Pending Verification' && (
+                <button
+                  type="button"
+                  onClick={() => handleConfirmPayment(selectedOrder.id)}
+                  className="w-full rounded-lg bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-800"
+                >
+                  Thibitisha malipo ya simu
+                </button>
+              )}
 
               <div className="border-t pt-4">
 

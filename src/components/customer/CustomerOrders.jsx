@@ -75,15 +75,19 @@ export const CustomerOrders = () => {
     setUpdateModalOpen(true);
   };
 
-  const handleSaveUpdate = (e) => {
+  const handleSaveUpdate = async (e) => {
     e.preventDefault();
     if (!selectedOrder) return;
 
-    updateOrderStatus(selectedOrder.id, selectedOrder.status, {
-      specialNotes: updateNotes,
-    });
-    showToast(`Taarifa za oda ${selectedOrder.id} zimebadilishwa kikamilifu!`, 'success');
-    setUpdateModalOpen(false);
+    try {
+      await updateOrderStatus(selectedOrder.id, selectedOrder.status, {
+        specialNotes: updateNotes,
+      });
+      showToast(`Taarifa za oda ${selectedOrder.id} zimebadilishwa kikamilifu!`, 'success');
+      setUpdateModalOpen(false);
+    } catch (error) {
+      showToast(error.message || 'Imeshindikana kusasisha oda', 'error');
+    }
   };
 
   return (
@@ -180,6 +184,11 @@ export const CustomerOrders = () => {
                         <span className="text-slate-700 font-bold">
                           Jumla: TSh {formatTsh(order.total)}
                         </span>
+                        <span className={`font-bold ${
+                          order.paymentStatus === 'Paid' ? 'text-emerald-700' : 'text-amber-700'
+                        }`}>
+                          Malipo: {order.paymentStatus}
+                        </span>
                         {order.assignedTo && order.assignedTo !== 'Unassigned' && (
                           <span className="text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md font-semibold text-[11px] flex items-center gap-1">
                             <Bike className="w-3 h-3" />
@@ -191,6 +200,11 @@ export const CustomerOrders = () => {
                       {order.specialNotes && (
                         <p className="text-[11px] text-amber-800 bg-amber-50/70 px-2.5 py-1 rounded-lg inline-block border border-amber-200/60 mt-1">
                           Maelezo: "{order.specialNotes}"
+                        </p>
+                      )}
+                      {order.paymentReference && (
+                        <p className="text-[11px] text-slate-600 mt-1">
+                          Transaction ID ya malipo: <strong>{order.paymentReference}</strong>
                         </p>
                       )}
                     </div>
