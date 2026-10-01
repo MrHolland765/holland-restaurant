@@ -2,7 +2,7 @@ const API_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const request = async (path, options = {}) => {
-  const token = localStorage.getItem("holland_token");
+  const token = sessionStorage.getItem("holland_token");
 
   const response = await fetch(`${API_URL}${path}`, {
     headers: {

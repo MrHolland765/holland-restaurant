@@ -16,9 +16,10 @@ export const AuthProvider = ({ children }) => {
     return saved || null;
   });
 
-  const [isAuthenticated, setIsAuthenticated] = useState(() =>
-    Boolean(localStorage.getItem('holland_token'))
-  );
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    localStorage.removeItem('holland_token');
+    return Boolean(sessionStorage.getItem('holland_token'));
+  });
 
   // Save user only when there is an authenticated user
   useEffect(() => {
@@ -72,7 +73,7 @@ export const AuthProvider = ({ children }) => {
       setCurrentUser(updatedUser);
       setCurrentRole(user.role);
 
-      localStorage.setItem('holland_token', data.token);
+      sessionStorage.setItem('holland_token', data.token);
 
       setIsAuthenticated(true);
 
@@ -126,7 +127,7 @@ export const AuthProvider = ({ children }) => {
       setCurrentUser(newUser);
       setCurrentRole('customer');
 
-      localStorage.setItem('holland_token', data.token);
+      sessionStorage.setItem('holland_token', data.token);
 
       setIsAuthenticated(true);
 
@@ -152,6 +153,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
 
     // Ondoa kila taarifa ya session
+    sessionStorage.removeItem('holland_token');
     localStorage.removeItem('holland_token');
     localStorage.removeItem('holland_role');
     localStorage.removeItem('holland_user');
