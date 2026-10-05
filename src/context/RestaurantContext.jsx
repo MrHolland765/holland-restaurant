@@ -3,6 +3,7 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useCallback,
 } from 'react';
 
 import {
@@ -76,13 +77,16 @@ export const RestaurantProvider = ({ children }) => {
   });
 
   useEffect(() => {
+    if (!isAuthenticated || currentRole === 'delivery') return;
+
+    let active = true;
     const loadProducts = async () => {
       try {
         const products = await getProducts();
 
-        setMenuItems(
-          products.map(formatProduct)
-        );
+        if (active) {
+          setMenuItems(products.map(formatProduct));
+        }
       } catch (error) {
         console.error(
           'Failed to load products:',
@@ -92,7 +96,10 @@ export const RestaurantProvider = ({ children }) => {
     };
 
     loadProducts();
-  }, []);
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated, currentRole]);
 
   const ownerKey = isAuthenticated && currentUser?.id
     ? `${currentRole}:${currentUser.id}`
@@ -152,7 +159,9 @@ export const RestaurantProvider = ({ children }) => {
   const [selectedCategory, setSelectedCategory] =
     useState('All');
 
-  const refreshDeliveryStaff = async () => {
+  const refreshDeliveryStaff = useCallback(async () => {
+    if (!isAuthenticated || currentRole !== 'admin') return;
+
     try {
       const staff = await getDeliveryStaff();
 
@@ -177,11 +186,13 @@ export const RestaurantProvider = ({ children }) => {
         error
       );
     }
-  };
+  }, [isAuthenticated, currentRole]);
 
   useEffect(() => {
+    if (!isAuthenticated || currentRole !== 'admin') return;
+
     refreshDeliveryStaff();
-  }, []);
+  }, [isAuthenticated, currentRole, refreshDeliveryStaff]);
 
   useEffect(() => {
     if (menuItems.length > 0) {

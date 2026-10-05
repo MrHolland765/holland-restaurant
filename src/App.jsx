@@ -1,5 +1,4 @@
-import React from 'react';
-import { testBackend } from './API';
+import { lazy, Suspense } from 'react';
 import { ToastProvider } from './context/ToastContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -9,30 +8,26 @@ import { AuthPage } from './components/auth/AuthPage';
 import { CustomerNavbar } from './components/customer/CustomerNavbar';
 import { CustomerSidebar } from './components/customer/CustomerSidebar';
 import { CartDrawer } from './components/customer/CartDrawer';
-import { CustomerDashboard } from './components/customer/CustomerDashboard';
-import { CustomerOrders } from './components/customer/CustomerOrders';
-import { OrderUpdateCart } from './components/customer/OrderUpdateCart';
-import { PaymentBill } from './components/customer/PaymentBill';
-import { PersonalInformation } from './components/customer/PersonalInformation';
-import { OthersPage } from './components/customer/OthersPage';
-import AdminDashboard from './components/admin/AdminDashboard';
-import { DeliveryDashboard } from './components/delivery/DeliveryDashboard';
+
+const CustomerDashboard = lazy(() => import('./components/customer/CustomerDashboard').then(({ CustomerDashboard }) => ({ default: CustomerDashboard })));
+const CustomerOrders = lazy(() => import('./components/customer/CustomerOrders').then(({ CustomerOrders }) => ({ default: CustomerOrders })));
+const OrderUpdateCart = lazy(() => import('./components/customer/OrderUpdateCart').then(({ OrderUpdateCart }) => ({ default: OrderUpdateCart })));
+const PaymentBill = lazy(() => import('./components/customer/PaymentBill').then(({ PaymentBill }) => ({ default: PaymentBill })));
+const PersonalInformation = lazy(() => import('./components/customer/PersonalInformation').then(({ PersonalInformation }) => ({ default: PersonalInformation })));
+const OthersPage = lazy(() => import('./components/customer/OthersPage').then(({ OthersPage }) => ({ default: OthersPage })));
+const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard'));
+const DeliveryDashboard = lazy(() => import('./components/delivery/DeliveryDashboard').then(({ DeliveryDashboard }) => ({ default: DeliveryDashboard })));
+
+const PageLoading = () => (
+  <div className="p-6 text-center text-sm text-slate-500" role="status">
+    Inapakia...
+  </div>
+);
 
 const MainApp = () => {
   const { isAuthenticated, currentRole } = useAuth();
   const { activeView } = useRestaurant();
   
-  React.useEffect(() => {
-  testBackend()
-    .then((data) => {
-      console.log('Backend message:', data.message);
-    })
-    .catch((error) => {
-      console.error('Backend connection failed:', error);
-    });
-
-}, []);
-
   if (!isAuthenticated) {
     return <AuthPage />;
   }
@@ -46,12 +41,16 @@ const MainApp = () => {
       {currentRole === 'admin' ? (
         // ADMIN PORTAL
         <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
-          <AdminDashboard />
+          <Suspense fallback={<PageLoading />}>
+            <AdminDashboard />
+          </Suspense>
         </main>
       ) : currentRole === 'delivery' ? (
         // DELIVERY STAFF PORTAL
         <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
-          <DeliveryDashboard />
+          <Suspense fallback={<PageLoading />}>
+            <DeliveryDashboard />
+          </Suspense>
         </main>
       ) : (
         // CUSTOMER PORTAL (Direct from Sketches Pages 1, 3, 4, 5, 6, 7)
@@ -61,13 +60,15 @@ const MainApp = () => {
           <CartDrawer />
 
           <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
-            {activeView === 'dashboard' && <CustomerDashboard />}
-            {activeView === 'foods_drinks_snacks' && <CustomerDashboard />}
-            {activeView === 'my_orders' && <CustomerOrders />}
-            {activeView === 'updates_orders' && <OrderUpdateCart />}
-            {activeView === 'my_bill' && <PaymentBill />}
-            {activeView === 'personal_info' && <PersonalInformation />}
-            {activeView === 'others' && <OthersPage />}
+            <Suspense fallback={<PageLoading />}>
+              {activeView === 'dashboard' && <CustomerDashboard />}
+              {activeView === 'foods_drinks_snacks' && <CustomerDashboard />}
+              {activeView === 'my_orders' && <CustomerOrders />}
+              {activeView === 'updates_orders' && <OrderUpdateCart />}
+              {activeView === 'my_bill' && <PaymentBill />}
+              {activeView === 'personal_info' && <PersonalInformation />}
+              {activeView === 'others' && <OthersPage />}
+            </Suspense>
           </main>
         </>
       )}

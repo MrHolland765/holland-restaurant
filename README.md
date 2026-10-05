@@ -8,7 +8,7 @@ React/Vite customer ordering portal with separate customer, admin, and delivery 
 2. In this folder run `npm run dev`.
 3. Open the address shown by Vite (normally `http://localhost:5173`).
 
-Vite reads `VITE_API_URL` from `.env`; restart the dev server after changing it. The production Vercel deployment has its own environment variable and continues to use the Render API.
+Vite reads `VITE_API_URL` from `.env`; restart the dev server after changing it. Without an override, local development uses `http://localhost:5000` and production uses the Render API. Set `VITE_API_URL` in Vercel to the Render API URL to override the production default.
 
 ## Demo accounts
 
@@ -19,6 +19,8 @@ Vite reads `VITE_API_URL` from `.env`; restart the dev server after changing it.
 | Delivery | `juma@holland.co.tz` | `delivery123` |
 
 The quick demo buttons use these same accounts. Product changes and customer orders are saved to the backend. Customers see only their own orders, delivery staff see orders assigned to them, and administrators can manage all orders. The backend seeds the requested Zanzibar food, juice, and snack menu into MySQL on startup. Menu cards use the original menu photographs and the Holland chips and avocado-juice illustrations. Tigo Pesa, M-Pesa, Airtel Money, and Halo Pesa use a manual payment flow to 0657281070: customers submit the SMS transaction ID and an admin must verify receipt and amount before marking the order paid. Cross-network transfers depend on the customer's provider. The app does not initiate or automatically verify mobile-money payments.
+
+New customer and delivery accounts require a password with at least 8 characters, an uppercase letter, a lowercase letter, a number, and a special character.
 
 The language selector is available at the top of the sign-in screen and in the top system bar after sign-in. It remembers the chosen Kiswahili or English setting. Sign-in lasts for the current browser tab; closing the tab ends the session and requires signing in again.
 

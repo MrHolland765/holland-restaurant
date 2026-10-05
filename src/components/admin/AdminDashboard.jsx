@@ -25,6 +25,7 @@ import {
   createDeliveryStaff,
   deleteDeliveryStaff,
 } from "../../API";
+import { isStrongPassword } from "../../utils/passwordValidation";
 
 const AdminDashboard = () => {
 
@@ -163,11 +164,9 @@ const AdminDashboard = () => {
       }
 
 
-      if (
-        deliveryForm.password.length < 6
-      ) {
+      if (!isStrongPassword(deliveryForm.password)) {
         showToast(
-          'Password lazima iwe na angalau herufi 6',
+          'Password lazima iwe na herufi 8 au zaidi, herufi kubwa na ndogo, namba na alama maalum',
           'error'
         );
         return;
@@ -1333,6 +1332,7 @@ const handleDeleteDelivery = async (id) => {
               <input
                 type="password"
                 placeholder="Password"
+                autoComplete="new-password"
                 value={
                   deliveryForm.password
                 }
@@ -1347,6 +1347,9 @@ const handleDeleteDelivery = async (id) => {
                 }
                 className="w-full rounded-lg border px-4 py-3 outline-none focus:border-gray-900"
               />
+              <p className="text-xs text-gray-500">
+                Angalau herufi 8, herufi kubwa na ndogo, namba na alama maalum.
+              </p>
 
 
               <button

@@ -4,6 +4,10 @@ import { useToast } from '../../context/ToastContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { ArrowRight, Check } from 'lucide-react';
 import { RestaurantLogo } from '../common/RestaurantLogo';
+import {
+  isStrongPassword,
+  PASSWORD_REQUIREMENTS,
+} from '../../utils/passwordValidation';
 
 export const AuthPage = ({ onComplete }) => {
   const { login, register } = useAuth();
@@ -78,6 +82,16 @@ if (onComplete) {
     return;
   }
 
+  if (!isStrongPassword(registerData.password)) {
+    showToast(
+      isEnglish
+        ? 'Password must have at least 8 characters, uppercase and lowercase letters, a number, and a special character.'
+        : 'Nenosiri liwe na angalau herufi 8, herufi kubwa na ndogo, namba na alama maalum.',
+      'error'
+    );
+    return;
+  }
+
   const result = await register(registerData);
 
   if (!result.success) {
@@ -103,7 +117,7 @@ if (onComplete) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50/70 via-slate-50 to-orange-50/50 flex flex-col justify-center items-center p-4 sm:p-6">
       <div className="w-full max-w-lg bg-white rounded-3xl shadow-xl shadow-slate-200/80 border border-slate-100 overflow-hidden">
-        {/* Sketch Header: WELCOME TO OUR RESTAURANT (HOLLAND RESTAURANT) */}
+        {/* Sketch Header: WELCOME TO (HOLLAND RESTAURANT) */}
         <div className="bg-gradient-to-r from-amber-600 via-amber-500 to-orange-600 p-6 text-white text-center relative">
           <select
             aria-label="Language"
@@ -116,7 +130,7 @@ if (onComplete) {
           </select>
           <RestaurantLogo className="w-16 h-16 mx-auto mb-3 border-2 border-amber-300 shadow-md" />
           <h1 className="text-xl sm:text-2xl font-black tracking-tight uppercase">
-            {isEnglish ? 'Welcome to Our Restaurant' : 'Karibu kwenye Mkahawa Wetu'}
+            {isEnglish ? 'Welcome to Holland Restaurant' : 'Karibu kwenye Mkahawa Wetu'}
           </h1>
           <p className="text-amber-100 font-bold text-lg mt-0.5 tracking-wide">
             HOLLAND RESTAURANT
@@ -205,7 +219,7 @@ if (onComplete) {
                     type="text"
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
-                    placeholder="mfano: 0712345678 au mteja@gmail.com"
+                    placeholder="+255 657281070    OR    holland@gmail.com"
                     required
                     className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 font-medium placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-sm"
                   />
@@ -243,7 +257,7 @@ if (onComplete) {
           {authMode === 'register' && (
             <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
               <h2 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-2">
-                Registers: Sajili Akaunti Mpya
+                Registers: As new Account,
               </h2>
 
               <div>
@@ -254,7 +268,7 @@ if (onComplete) {
                   type="text"
                   value={registerData.fullName}
                   onChange={(e) => setRegisterData({ ...registerData, fullName: e.target.value })}
-                  placeholder="Jina lako kamili"
+                  placeholder="Eg: Abdullhamid Khamis Abdalla"
                   required
                   className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
@@ -268,7 +282,7 @@ if (onComplete) {
                   type="email"
                   value={registerData.email}
                   onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                  placeholder="barua@pepe.com"
+                  placeholder="abdullhamidkhamis765@gmail.com"
                   className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
@@ -281,7 +295,7 @@ if (onComplete) {
                   type="tel"
                   value={registerData.phone}
                   onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
-                  placeholder="0712 345 678"
+                  placeholder="+255 657281070"
                   required
                   className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
@@ -295,7 +309,7 @@ if (onComplete) {
                   type="text"
                   value={registerData.address}
                   onChange={(e) => setRegisterData({ ...registerData, address: e.target.value })}
-                  placeholder="mfano: Mikocheni B, Mwai Kibaki Road"
+                  placeholder="Magharib A,  Mjini Magharib,  Zanzibar."
                   required
                   className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
@@ -309,10 +323,24 @@ if (onComplete) {
                   type="password"
                   value={registerData.password}
                   onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                  placeholder="Weka nenosiri salama"
+                  placeholder={isEnglish ? 'Create a strong password' : 'Tengeneza nenosiri imara'}
                   required
+                  autoComplete="new-password"
                   className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
+                <ul className="mt-2 grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
+                  {PASSWORD_REQUIREMENTS.map(({ key, test, sw, en }) => {
+                    const passed = test(registerData.password);
+                    return (
+                      <li
+                        key={key}
+                        className={passed ? 'text-emerald-700' : 'text-slate-500'}
+                      >
+                        {passed ? '✓' : '○'} {isEnglish ? en : sw}
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
 
               {/* Sketch button: [Submit] with arrow to Login */}
@@ -320,7 +348,7 @@ if (onComplete) {
                 type="submit"
                 className="w-full mt-3 py-3.5 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-sm shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2"
               >
-                <span>Submit Usajili</span>
+                <span>Submit</span>
                 <Check className="w-4 h-4" />
               </button>
 
