@@ -50,6 +50,12 @@ export const loginUser = async (email, password) => {
   });
 };
 
+export const saveProfileAvatar = (avatar) =>
+  request("/api/profile/avatar", {
+    method: "PUT",
+    body: JSON.stringify({ avatar }),
+  });
+
 export const registerUser = async (
   full_name,
   email,

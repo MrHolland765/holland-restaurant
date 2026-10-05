@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { loginUser, registerUser } from '../API';
+import { loginUser, registerUser, saveProfileAvatar } from '../API';
 
 const AuthContext = createContext(null);
 
@@ -60,6 +60,16 @@ export const AuthProvider = ({ children }) => {
   };
 }
 
+      const savedUser = JSON.parse(localStorage.getItem('holland_user') || 'null');
+      const cachedAvatar =
+        savedUser?.id === user.id && savedUser?.email === user.email
+          ? savedUser.avatar
+          : null;
+      const avatar =
+        user.avatar ||
+        cachedAvatar ||
+        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300&auto=format&fit=crop&q=80';
+
       const updatedUser = {
         id: user.id,
         fullName: user.full_name,
@@ -67,13 +77,23 @@ export const AuthProvider = ({ children }) => {
         email: user.email,
         phone: user.phone || '',
         address: user.address || '',
+        avatar,
         role: user.role,
       };
 
+      sessionStorage.setItem('holland_token', data.token);
+
+      if (!user.avatar && cachedAvatar?.startsWith('data:image/jpeg;base64,')) {
+        try {
+          const savedAvatar = await saveProfileAvatar(cachedAvatar);
+          updatedUser.avatar = savedAvatar.avatar;
+        } catch (error) {
+          console.error('Failed to sync the locally saved profile image:', error);
+        }
+      }
+
       setCurrentUser(updatedUser);
       setCurrentRole(user.role);
-
-      sessionStorage.setItem('holland_token', data.token);
 
       setIsAuthenticated(true);
 
@@ -169,7 +189,7 @@ export const AuthProvider = ({ children }) => {
   // UPDATE PROFILE
   // =========================
 
-  const updateProfile = (updatedFields) => {
+  const updateProfile = async (updatedFields) => {
     if (!currentUser) {
       return {
         success: false,
@@ -183,14 +203,19 @@ export const AuthProvider = ({ children }) => {
     };
 
     try {
+      if (updatedFields.avatar?.startsWith('data:image/jpeg;base64,')) {
+        const savedAvatar = await saveProfileAvatar(updatedFields.avatar);
+        updatedUser.avatar = savedAvatar.avatar;
+      }
+
       localStorage.setItem('holland_user', JSON.stringify(updatedUser));
       setCurrentUser(updatedUser);
       return { success: true };
     } catch (error) {
-      console.error('Failed to save profile to local storage:', error);
+      console.error('Failed to save profile:', error);
       return {
         success: false,
-        message: 'Imeshindikana kuhifadhi picha au taarifa. Jaribu picha ndogo zaidi.',
+        message: error.message || 'Imeshindikana kuhifadhi picha ya wasifu.',
       };
     }
   };

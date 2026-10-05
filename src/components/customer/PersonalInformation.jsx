@@ -78,7 +78,7 @@ export const PersonalInformation = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (passwordData.newPassword) {
@@ -93,16 +93,17 @@ export const PersonalInformation = () => {
     }
 
     setIsSaving(true);
-    setTimeout(() => {
-      const result = updateProfile(formData);
-      setIsSaving(false);
+    try {
+      const result = await updateProfile(formData);
       if (!result.success) {
         showToast(result.message || 'Imeshindikana kuhifadhi taarifa.', 'error');
         return;
       }
       setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
-      showToast('Taarifa binafsi (Personal Information) zimehifadhiwa kikamilifu!', 'success');
-    }, 600);
+      showToast('Picha ya wasifu imehifadhiwa kwenye akaunti yako.', 'success');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (

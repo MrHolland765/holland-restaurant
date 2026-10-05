@@ -24,6 +24,8 @@ New customer and delivery accounts require a password with at least 8 characters
 
 The language selector is available at the top of the sign-in screen and in the top system bar after sign-in. It remembers the chosen Kiswahili or English setting. Sign-in lasts for the current browser tab; closing the tab ends the session and requires signing in again.
 
+Profile photos are saved to the account when you press **SAVE** and appear after signing in on another device. If you uploaded a photo before this feature was deployed, sign in on the device that has it and press **SAVE** once to sync it.
+
 ## Checks
 
 - `npm run build` creates a production build.
