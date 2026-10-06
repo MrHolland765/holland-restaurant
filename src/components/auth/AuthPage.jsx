@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, Check, Eye, EyeOff } from 'lucide-react';
 import { RestaurantLogo } from '../common/RestaurantLogo';
 import {
   isStrongPassword,
@@ -18,10 +18,17 @@ export const AuthPage = ({ onComplete }) => {
    // 'customer' | 'admin' | 'delivery'
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
   const [selectedRole, setSelectedRole] = useState('customer');
+  const [showRegistrationPassword, setShowRegistrationPassword] = useState(false);
 
   // Login form state
   const [loginIdentifier, setLoginIdentifier] = useState('');
 const [loginPassword, setLoginPassword] = useState('');
+
+  const handleRoleChange = (role) => {
+    setSelectedRole(role);
+    setLoginIdentifier('');
+    setLoginPassword('');
+  };
 
   // Register form state (from Sketch Page 1)
   const [registerData, setRegisterData] = useState({
@@ -144,7 +151,7 @@ if (onComplete) {
 <div className="flex items-center justify-center gap-2 mb-5">
   <button
     type="button"
-    onClick={() => setSelectedRole('customer')}
+    onClick={() => handleRoleChange('customer')}
     className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
       selectedRole === 'customer'
         ? 'bg-amber-500 text-white shadow-md'
@@ -156,7 +163,7 @@ if (onComplete) {
 
   <button
     type="button"
-    onClick={() => setSelectedRole('admin')}
+    onClick={() => handleRoleChange('admin')}
     className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
       selectedRole === 'admin'
         ? 'bg-amber-500 text-white shadow-md'
@@ -168,7 +175,7 @@ if (onComplete) {
 
   <button
     type="button"
-    onClick={() => setSelectedRole('delivery')}
+    onClick={() => handleRoleChange('delivery')}
     className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
       selectedRole === 'delivery'
         ? 'bg-amber-500 text-white shadow-md'
@@ -209,7 +216,7 @@ if (onComplete) {
 
           {/* FORM 1: LOGIN FORM (Exact sketch layout) */}
           {authMode === 'login' && (
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <form onSubmit={handleLoginSubmit} autoComplete="off" className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   {isEnglish ? 'Email or Phone no:' : 'Barua pepe au namba ya simu:'}
@@ -217,6 +224,8 @@ if (onComplete) {
                 <div className="relative">
                   <input
                     type="text"
+                    name="account-identifier"
+                    autoComplete="off"
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
                     placeholder="+255 657281070    OR    holland@gmail.com"
@@ -232,6 +241,8 @@ if (onComplete) {
                 </label>
                 <input
                   type="password"
+                  name="account-password"
+                  autoComplete="new-password"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   placeholder="••••••••"
@@ -255,7 +266,7 @@ if (onComplete) {
 
           {/* FORM 2: REGISTRATION FORM (Direct translation of sketch Page 1: "Registers:") */}
           {authMode === 'register' && (
-            <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
+            <form onSubmit={handleRegisterSubmit} autoComplete="off" className="space-y-3.5">
               <h2 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-2">
                 Registers: As new Account,
               </h2>
@@ -319,15 +330,31 @@ if (onComplete) {
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Password:
                 </label>
-                <input
-                  type="password"
-                  value={registerData.password}
-                  onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                  placeholder={isEnglish ? 'Create a strong password' : 'Tengeneza nenosiri imara'}
-                  required
-                  autoComplete="new-password"
-                  className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
+                <div className="relative">
+                  <input
+                    type={showRegistrationPassword ? 'text' : 'password'}
+                    name="registration-password"
+                    value={registerData.password}
+                    onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+                    placeholder={isEnglish ? 'Create a strong password' : 'Tengeneza nenosiri imara'}
+                    required
+                    autoComplete="new-password"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 pr-12 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegistrationPassword((visible) => !visible)}
+                    aria-label={showRegistrationPassword
+                      ? (isEnglish ? 'Hide password' : 'Ficha nenosiri')
+                      : (isEnglish ? 'Show password' : 'Onyesha nenosiri')}
+                    aria-pressed={showRegistrationPassword}
+                    className="absolute inset-y-0 right-3 flex items-center text-slate-500 hover:text-slate-800"
+                  >
+                    {showRegistrationPassword
+                      ? <EyeOff className="h-5 w-5" />
+                      : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
                 <ul className="mt-2 grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
                   {PASSWORD_REQUIREMENTS.map(({ key, test, sw, en }) => {
                     const passed = test(registerData.password);

@@ -28,6 +28,8 @@ Profile photos are saved to the account when you press **SAVE** and appear after
 
 After delivery staff mark an order as delivered, the customer can confirm receipt from **My Orders**. Administrators can delete an order only after the customer confirms receipt.
 
+Administrators can remove a customer account from the **Customers** tab after the customer has a received order and has no active orders; completed order history is kept. Delivery directions open the customer's address in Google Maps. Admins must confirm mobile or cash payment before assigning an order. The login fields clear when changing account role or signing out; browsers may still offer credentials saved in their own password manager.
+
 ## Checks
 
 - `npm run build` creates a production build.

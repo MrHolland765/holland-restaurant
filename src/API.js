@@ -152,3 +152,10 @@ export const deleteDeliveryStaff = async (id) => {
     method: "DELETE",
   });
 };
+
+export const getCustomers = () => request("/api/customers");
+
+export const deleteCustomer = (id) =>
+  request(`/api/customers/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });

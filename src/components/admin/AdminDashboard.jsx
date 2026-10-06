@@ -24,6 +24,8 @@ import { useRestaurant } from "../../context/RestaurantContext";
 import {
   createDeliveryStaff,
   deleteDeliveryStaff,
+  deleteCustomer,
+  getCustomers,
 } from "../../API";
 import { isStrongPassword } from "../../utils/passwordValidation";
 
@@ -71,6 +73,9 @@ const AdminDashboard = () => {
 
   const [toast, setToast] =
     useState(null);
+
+  const [customers, setCustomers] = useState([]);
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
 
 
   // ===============================
@@ -255,6 +260,34 @@ const handleDeleteDelivery = async (id) => {
         "Imeshindikana kufuta Delivery account",
       "error"
     );
+  }
+};
+
+const handleLoadCustomers = async () => {
+  setActiveTab('customers');
+  setIsLoadingCustomers(true);
+  try {
+    setCustomers(await getCustomers());
+  } catch (error) {
+    showToast(error.message || 'Imeshindikana kupata wateja.', 'error');
+  } finally {
+    setIsLoadingCustomers(false);
+  }
+};
+
+const handleDeleteCustomer = async (customer) => {
+  if (!customer.has_received_order || customer.has_active_orders) return;
+  if (!window.confirm(`Ondoa akaunti ya ${customer.full_name} (${customer.email})? Historia ya oda zilizokamilika itabaki.`)) {
+    return;
+  }
+
+  try {
+    await deleteCustomer(customer.id);
+    setCustomers((previous) => previous.filter((item) => item.id !== customer.id));
+    showToast('Akaunti ya mteja imeondolewa.', 'success');
+  } catch (error) {
+    showToast(error.message || 'Imeshindikana kuondoa akaunti ya mteja.', 'error');
+    await handleLoadCustomers();
   }
 };
 
@@ -501,7 +534,11 @@ const handleDeleteDelivery = async (id) => {
   };
 
   const handleConfirmPayment = async (orderId) => {
-    if (!window.confirm('Je, umethibitisha kwenye Tigo Pesa kuwa muamala huu na kiasi cha oda vimepokelewa?')) {
+    const order = orders.find((item) => item.id === orderId) || selectedOrder;
+    const confirmationMessage = order?.paymentMethod === 'Lipa Baadaye (Cash on Delivery)'
+      ? 'Thibitisha kuwa umepokea cash ya oda hii kutoka kwa mteja?'
+      : 'Je, umethibitisha kwenye wallet kuwa muamala huu na kiasi cha oda vimepokelewa?';
+    if (!window.confirm(confirmationMessage)) {
       return;
     }
     try {
@@ -717,6 +754,17 @@ const handleDeleteDelivery = async (id) => {
           }`}
         >
           Delivery Staff
+        </button>
+
+        <button
+          onClick={handleLoadCustomers}
+          className={`rounded-lg px-4 py-2 ${
+            activeTab === 'customers'
+              ? 'bg-gray-900 text-white'
+              : 'bg-white text-gray-700'
+          }`}
+        >
+          Customers
         </button>
 
       </div>
@@ -938,18 +986,33 @@ const handleDeleteDelivery = async (id) => {
                         {order.status}
                       </span>
 
-                      <button
-                        onClick={() =>
-                          setSelectedOrder(
-                            order
-                          )
-                        }
-                        className="rounded-lg bg-gray-900 p-2 text-white"
-                      >
-                        <Eye
-                          size={18}
-                        />
-                      </button>
+                      <span className={`rounded-full px-3 py-1 text-xs ${
+                        order.paymentStatus === 'Paid'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-amber-100 text-amber-900'
+                      }`}>
+                        {order.paymentStatus}
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedOrder(order)}
+                          aria-label={`View order ${order.id}`}
+                          className="rounded-lg bg-gray-900 p-2 text-white"
+                        >
+                          <Eye size={18} />
+                        </button>
+                        {order.status === 'Received' && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteReceivedOrder(order)}
+                            className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
 
                     </div>
 
@@ -1230,6 +1293,57 @@ const handleDeleteDelivery = async (id) => {
 
           )}
 
+        </div>
+      )}
+
+      {activeTab === 'customers' && (
+        <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="mb-5">
+            <h2 className="text-xl font-bold">Customers</h2>
+            <p className="text-sm text-gray-500">
+              Mteja anaweza kuondolewa baada ya kupokea oda na kumaliza oda zote zinazoendelea. Historia ya oda zilizokamilika itabaki.
+            </p>
+          </div>
+
+          {isLoadingCustomers ? (
+            <p className="py-8 text-center text-sm text-gray-500">Inapakia wateja...</p>
+          ) : customers.length === 0 ? (
+            <p className="py-8 text-center text-sm text-gray-500">Hakuna akaunti za wateja.</p>
+          ) : (
+            <div className="space-y-3">
+              {customers.map((customer) => {
+                const canDelete = customer.has_received_order === 1 && customer.has_active_orders === 0;
+                return (
+                  <div
+                    key={customer.id}
+                    className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <h3 className="font-bold">{customer.full_name}</h3>
+                      <p className="text-sm text-gray-600">{customer.email}</p>
+                      <p className="text-sm text-gray-500">{customer.phone || 'Hakuna namba ya simu'}</p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {customer.has_active_orders
+                          ? 'Ana oda ambayo bado inaendelea.'
+                          : customer.has_received_order
+                            ? 'Oda imepokelewa; akaunti inaweza kuondolewa.'
+                            : 'Akaunti itaondolewa baada ya kupokea oda.'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!canDelete}
+                      onClick={() => handleDeleteCustomer(customer)}
+                      className="flex items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <Trash2 size={16} />
+                      Ondoa mteja
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -1687,23 +1801,13 @@ const handleDeleteDelivery = async (id) => {
                 </p>
               )}
 
-              {selectedOrder.paymentStatus === 'Pending Verification' && (
+              {['Pending Verification', 'Pending (Cash)'].includes(selectedOrder.paymentStatus) && (
                 <button
                   type="button"
                   onClick={() => handleConfirmPayment(selectedOrder.id)}
                   className="w-full rounded-lg bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-800"
                 >
-                  Thibitisha malipo ya simu
-                </button>
-              )}
-
-              {selectedOrder.status === 'Received' && (
-                <button
-                  type="button"
-                  onClick={() => handleDeleteReceivedOrder(selectedOrder)}
-                  className="w-full rounded-lg bg-red-600 px-4 py-3 font-semibold text-white hover:bg-red-700"
-                >
-                  Futa oda iliyopokelewa
+                  Thibitisha malipo ya oda
                 </button>
               )}
 
@@ -1747,15 +1851,21 @@ const handleDeleteDelivery = async (id) => {
 
 
                 <button
+                  disabled={selectedOrder.paymentStatus !== 'Paid'}
                   onClick={() =>
                     handleAssignOrder(
                       selectedOrder.id
                     )
                   }
-                  className="w-full rounded-lg bg-gray-900 px-4 py-3 font-semibold text-white"
+                  className="w-full rounded-lg bg-gray-900 px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Assign Order
                 </button>
+                {selectedOrder.paymentStatus !== 'Paid' && (
+                  <p className="mt-2 text-center text-xs text-amber-800">
+                    Thibitisha malipo kwanza kabla ya ku-assign oda.
+                  </p>
+                )}
 
               </div>
 

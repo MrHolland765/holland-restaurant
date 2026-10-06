@@ -268,18 +268,15 @@ export const DeliveryDashboard = () => {
 
                   {order.status === 'Out for Delivery' && (
                     <>
-                      <button
-                        onClick={() =>
-                          showToast(
-                            `Ramani ya kwenda ${order.customerAddress} inafunguliwa!`,
-                            'info'
-                          )
-                        }
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(order.customerAddress || '')}&travelmode=driving&dir_action=navigate`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1.5"
                       >
                         <Navigation className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Fungua Ramani (Directions)</span>
-                      </button>
+                        <span>Fuatilia ramani (Google Maps)</span>
+                      </a>
 
                       <button
                         onClick={() =>
