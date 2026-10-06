@@ -8,6 +8,7 @@ import {
   isStrongPassword,
   PASSWORD_REQUIREMENTS,
 } from '../../utils/passwordValidation';
+import { requestPasswordReset, resetPassword } from '../../API';
 
 export const AuthPage = ({ onComplete }) => {
   const { login, register } = useAuth();
@@ -16,9 +17,13 @@ export const AuthPage = ({ onComplete }) => {
   const isEnglish = language === 'en';
 
    // 'customer' | 'admin' | 'delivery'
-  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
+  const resetToken = new URLSearchParams(window.location.search).get('resetToken');
+  const [authMode, setAuthMode] = useState(resetToken ? 'reset' : 'login');
   const [selectedRole, setSelectedRole] = useState('customer');
   const [showRegistrationPassword, setShowRegistrationPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
 
   // Login form state
   const [loginIdentifier, setLoginIdentifier] = useState('');
@@ -28,6 +33,65 @@ const [loginPassword, setLoginPassword] = useState('');
     setSelectedRole(role);
     setLoginIdentifier('');
     setLoginPassword('');
+  };
+
+  const handleForgotPasswordSubmit = async (event) => {
+    event.preventDefault();
+
+    try {
+      await requestPasswordReset(resetEmail.trim());
+      showToast(
+        isEnglish
+          ? 'If an account exists for that email, a password reset link has been sent.'
+          : 'Kama akaunti ipo kwa barua pepe hiyo, kiungo cha kubadilisha nenosiri kimetumwa.',
+        'success'
+      );
+      setAuthMode('login');
+    } catch (error) {
+      showToast(
+        error.message || (isEnglish ? 'Could not send reset email.' : 'Imeshindikana kutuma barua pepe.'),
+        'error'
+      );
+    }
+  };
+
+  const handleResetPasswordSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!isStrongPassword(newPassword)) {
+      showToast(
+        isEnglish
+          ? 'Password must have at least 8 characters, uppercase and lowercase letters, a number, and a special character.'
+          : 'Nenosiri liwe na angalau herufi 8, herufi kubwa na ndogo, namba na alama maalum.',
+        'error'
+      );
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      showToast(
+        isEnglish ? 'Passwords do not match.' : 'Manenosiri hayafanani.',
+        'error'
+      );
+      return;
+    }
+
+    try {
+      await resetPassword(resetToken, newPassword);
+      sessionStorage.removeItem('holland_token');
+      showToast(
+        isEnglish
+          ? 'Password updated. Please sign in with your new password.'
+          : 'Nenosiri limebadilishwa. Tafadhali ingia kwa kutumia nenosiri jipya.',
+        'success'
+      );
+      window.location.replace(window.location.pathname);
+    } catch (error) {
+      showToast(
+        error.message || (isEnglish ? 'Could not reset password.' : 'Imeshindikana kubadilisha nenosiri.'),
+        'error'
+      );
+    }
   };
 
   // Register form state (from Sketch Page 1)
@@ -147,6 +211,8 @@ if (onComplete) {
           </p>
         </div>
         
+        {!['forgot', 'reset'].includes(authMode) && (
+          <>
          {/* ROLE SELECTOR */}
 <div className="flex items-center justify-center gap-2 mb-5">
   <button
@@ -213,6 +279,8 @@ if (onComplete) {
               {isEnglish ? 'Register' : 'Jisajili'}
             </button>
           </div>
+          </>
+        )}
 
           {/* FORM 1: LOGIN FORM (Exact sketch layout) */}
           {authMode === 'login' && (
@@ -260,7 +328,93 @@ if (onComplete) {
                 <ArrowRight className="w-4 h-4" />
               </button>
 
-          
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setAuthMode('forgot')}
+                  className="text-xs font-semibold text-amber-700 hover:underline"
+                >
+                  {isEnglish ? 'Forgot password?' : 'Umesahau nenosiri?'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {authMode === 'forgot' && (
+            <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
+              <h2 className="text-lg font-bold text-slate-800">
+                {isEnglish ? 'Reset your password' : 'Badilisha nenosiri lako'}
+              </h2>
+              <p className="text-sm text-slate-600">
+                {isEnglish
+                  ? 'Enter the email address linked to your account and we will send you a reset link.'
+                  : 'Weka barua pepe ya akaunti yako, tutakutumia kiungo cha kubadilisha nenosiri.'}
+              </p>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                {isEnglish ? 'Email address' : 'Barua pepe'}
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={(event) => setResetEmail(event.target.value)}
+                  autoComplete="email"
+                  required
+                  className="mt-1.5 w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </label>
+              <button
+                type="submit"
+                className="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold"
+              >
+                {isEnglish ? 'Send reset link' : 'Tuma kiungo'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthMode('login')}
+                className="w-full text-sm font-semibold text-amber-700 hover:underline"
+              >
+                {isEnglish ? 'Back to sign in' : 'Rudi kwenye kuingia'}
+              </button>
+            </form>
+          )}
+
+          {authMode === 'reset' && (
+            <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+              <h2 className="text-lg font-bold text-slate-800">
+                {isEnglish ? 'Choose a new password' : 'Weka nenosiri jipya'}
+              </h2>
+              <label className="block text-xs font-bold text-slate-700">
+                {isEnglish ? 'New password' : 'Nenosiri jipya'}
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  autoComplete="new-password"
+                  required
+                  className="mt-1.5 w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </label>
+              <label className="block text-xs font-bold text-slate-700">
+                {isEnglish ? 'Confirm new password' : 'Thibitisha nenosiri jipya'}
+                <input
+                  type="password"
+                  value={confirmNewPassword}
+                  onChange={(event) => setConfirmNewPassword(event.target.value)}
+                  autoComplete="new-password"
+                  required
+                  className="mt-1.5 w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </label>
+              <p className="text-xs text-slate-500">
+                {isEnglish
+                  ? 'Use at least 8 characters, uppercase and lowercase letters, a number, and a symbol.'
+                  : 'Tumia angalau herufi 8, herufi kubwa na ndogo, namba na alama maalum.'}
+              </p>
+              <button
+                type="submit"
+                className="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold"
+              >
+                {isEnglish ? 'Update password' : 'Badilisha nenosiri'}
+              </button>
             </form>
           )}
 

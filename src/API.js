@@ -50,6 +50,18 @@ export const loginUser = async (email, password) => {
   });
 };
 
+export const requestPasswordReset = (email) =>
+  request("/api/password/forgot", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+
+export const resetPassword = (token, password) =>
+  request("/api/password/reset", {
+    method: "POST",
+    body: JSON.stringify({ token, password }),
+  });
+
 export const saveProfileAvatar = (avatar) =>
   request("/api/profile/avatar", {
     method: "PUT",

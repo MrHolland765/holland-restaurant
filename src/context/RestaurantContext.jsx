@@ -106,6 +106,9 @@ export const RestaurantProvider = ({ children }) => {
   const ownerKey = isAuthenticated && currentUser?.id
     ? `${currentRole}:${currentUser.id}`
     : null;
+  const cartStorageKey = ownerKey
+    ? `holland_cart:${ownerKey}`
+    : null;
   const [ordersState, setOrdersState] = useState({
     ownerKey: null,
     records: [],
@@ -114,34 +117,41 @@ export const RestaurantProvider = ({ children }) => {
     ? ordersState.records
     : [];
 
-  const [cart, setCart] = useState(() => {
-    const saved = localStorage.getItem(
-      'holland_cart'
-    );
+  const [cartState, setCartState] = useState(() => {
+    const saved = cartStorageKey
+      ? localStorage.getItem(cartStorageKey)
+      : null;
 
-    return saved
-      ? JSON.parse(saved)
-      : [
-          {
-            id: 'f1',
-            name: 'Biryani ya Kuku (Holland Special)',
-            category: 'Foods',
-            price: 12000,
-            image:
-              'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&auto=format&fit=crop&q=80',
-            quantity: 1,
-          },
-          {
-            id: 'd1',
-            name: 'Holland Fresh Passion Juice (500ml)',
-            category: 'Drinks',
-            price: 3500,
-            image:
-              'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&auto=format&fit=crop&q=80',
-            quantity: 2,
-          },
-        ];
+    return {
+      ownerKey,
+      records: saved ? JSON.parse(saved) : [],
+    };
   });
+  const readCartForOwner = () => {
+    const saved = cartStorageKey
+      ? localStorage.getItem(cartStorageKey)
+      : null;
+
+    return saved ? JSON.parse(saved) : [];
+  };
+  const cart = cartState.ownerKey === ownerKey
+    ? cartState.records
+    : readCartForOwner();
+
+  const setCart = (update) => {
+    setCartState((previous) => {
+      const currentCart = previous.ownerKey === ownerKey
+        ? previous.records
+        : readCartForOwner();
+
+      return {
+        ownerKey,
+        records: typeof update === 'function'
+          ? update(currentCart)
+          : update,
+      };
+    });
+  };
 
   const [deliveryStaff, setDeliveryStaff] =
     useState([]);
@@ -232,11 +242,17 @@ export const RestaurantProvider = ({ children }) => {
   }, [ownerKey]);
 
   useEffect(() => {
-    localStorage.setItem(
-      'holland_cart',
-      JSON.stringify(cart)
-    );
-  }, [cart]);
+    localStorage.removeItem('holland_cart');
+  }, []);
+
+  useEffect(() => {
+    if (cartStorageKey && cartState.ownerKey === ownerKey) {
+      localStorage.setItem(
+        cartStorageKey,
+        JSON.stringify(cartState.records)
+      );
+    }
+  }, [cartState, cartStorageKey, ownerKey]);
 
   const cartSubtotal = cart.reduce(
     (sum, item) =>

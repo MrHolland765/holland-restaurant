@@ -27,8 +27,9 @@ const PageLoading = () => (
 const MainApp = () => {
   const { isAuthenticated, currentRole } = useAuth();
   const { activeView } = useRestaurant();
-  
-  if (!isAuthenticated) {
+
+  const isPasswordReset = new URLSearchParams(window.location.search).has('resetToken');
+  if (!isAuthenticated || isPasswordReset) {
     return <AuthPage />;
   }
 
