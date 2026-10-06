@@ -26,6 +26,8 @@ The language selector is available at the top of the sign-in screen and in the t
 
 Profile photos are saved to the account when you press **SAVE** and appear after signing in on another device. If you uploaded a photo before this feature was deployed, sign in on the device that has it and press **SAVE** once to sync it.
 
+After delivery staff mark an order as delivered, the customer can confirm receipt from **My Orders**. Administrators can delete an order only after the customer confirms receipt.
+
 ## Checks
 
 - `npm run build` creates a production build.

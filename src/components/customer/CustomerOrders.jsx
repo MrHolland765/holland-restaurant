@@ -54,6 +54,12 @@ export const CustomerOrders = () => {
           icon: CheckCircle2,
           label: 'Imefika / Imekabidhiwa (Delivered)',
         };
+      case 'Received':
+        return {
+          bg: 'bg-green-50 text-green-800 border-green-200',
+          icon: CheckCircle2,
+          label: 'Imepokelewa na mteja (Received)',
+        };
       case 'Cancelled':
         return {
           bg: 'bg-red-50 text-red-800 border-red-200',
@@ -87,6 +93,19 @@ export const CustomerOrders = () => {
       setUpdateModalOpen(false);
     } catch (error) {
       showToast(error.message || 'Imeshindikana kusasisha oda', 'error');
+    }
+  };
+
+  const handleConfirmReceived = async () => {
+    if (!selectedOrder || selectedOrder.status !== 'Delivered') return;
+    if (!window.confirm('Thibitisha kuwa umepokea oda hii?')) return;
+
+    try {
+      const updatedOrder = await updateOrderStatus(selectedOrder.id, 'Received');
+      setSelectedOrder(updatedOrder);
+      showToast('Umethibitisha kupokea oda yako. Asante!', 'success');
+    } catch (error) {
+      showToast(error.message || 'Imeshindikana kuthibitisha kupokea oda.', 'error');
     }
   };
 
@@ -212,13 +231,15 @@ export const CustomerOrders = () => {
 
                   {/* Right: [Updates] Action Button (Exact from Sketch Page 4) */}
                   <div className="flex items-center gap-2 self-end md:self-center shrink-0">
-                    <button
-                      onClick={() => handleOpenUpdate(order)}
-                      className="px-4 py-2 rounded-2xl bg-white hover:bg-slate-100 text-slate-800 border-2 border-slate-300 font-bold text-xs transition-all shadow-xs flex items-center gap-1.5"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Updates</span>
-                    </button>
+                    {order.status === 'Pending' && (
+                      <button
+                        onClick={() => handleOpenUpdate(order)}
+                        className="px-4 py-2 rounded-2xl bg-white hover:bg-slate-100 text-slate-800 border-2 border-slate-300 font-bold text-xs transition-all shadow-xs flex items-center gap-1.5"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Updates</span>
+                      </button>
+                    )}
 
                     <button
                       onClick={() => setSelectedOrder(order)}
@@ -261,9 +282,10 @@ export const CustomerOrders = () => {
                 { step: 'Pending', title: '1. Oda Imepokelewa', desc: 'Mteja ameweka oda na malipo yamehakikiwa.' },
                 { step: 'Preparing', title: '2. Inapikwa Jikoni', desc: 'Wapishi wa Holland Restaurant wanaandaa chakula safi.' },
                 { step: 'Out for Delivery', title: '3. Njiani Inakuja', desc: `Rider ${selectedOrder.assignedTo || 'wa Holland'} anakuja na oda yako.` },
-                { step: 'Delivered', title: '4. Imekabidhiwa', desc: 'Chakula kimewasili salama. Karibu tena!' },
+                { step: 'Delivered', title: '4. Imekabidhiwa', desc: 'Delivery amekabidhi oda yako.' },
+                { step: 'Received', title: '5. Umethibitisha kupokea', desc: 'Umethibitisha kuwa umepokea oda salama.' },
               ].map((s, idx) => {
-                const statuses = ['Pending', 'Preparing', 'Out for Delivery', 'Delivered'];
+                const statuses = ['Pending', 'Preparing', 'Out for Delivery', 'Delivered', 'Received'];
                 const currentIdx = statuses.indexOf(selectedOrder.status);
                 const isCompleted = currentIdx >= idx;
                 const isCurrent = currentIdx === idx;
@@ -310,12 +332,22 @@ export const CustomerOrders = () => {
             </div>
 
             <div className="flex gap-2">
-              <button
-                onClick={() => handleOpenUpdate(selectedOrder)}
-                className="flex-1 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs"
-              >
-                Fanya Marekebisho (Updates)
-              </button>
+              {selectedOrder.status === 'Pending' && (
+                <button
+                  onClick={() => handleOpenUpdate(selectedOrder)}
+                  className="flex-1 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs"
+                >
+                  Fanya Marekebisho (Updates)
+                </button>
+              )}
+              {selectedOrder.status === 'Delivered' && (
+                <button
+                  onClick={handleConfirmReceived}
+                  className="flex-1 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
+                >
+                  Nimepokea oda yangu
+                </button>
+              )}
               <button
                 onClick={() => setSelectedOrder(null)}
                 className="px-4 py-2.5 rounded-2xl bg-slate-100 text-slate-700 font-bold text-xs"

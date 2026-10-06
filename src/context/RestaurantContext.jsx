@@ -15,6 +15,7 @@ import {
   deleteProduct,
   getProducts,
   updateProduct,
+  deleteOrder as deleteOrderRequest,
   getDeliveryStaff,
   getOrders,
   createOrder as createOrderRequest,
@@ -364,6 +365,17 @@ export const RestaurantProvider = ({ children }) => {
           records: prev.records.map((order) => order.id === orderId ? updatedOrder : order),
         }
       : prev);
+    return updatedOrder;
+  };
+
+  const deleteOrder = async (orderId) => {
+    await deleteOrderRequest(orderId);
+    setOrdersState((prev) => prev.ownerKey === ownerKey
+      ? {
+          ...prev,
+          records: prev.records.filter((order) => order.id !== orderId),
+        }
+      : prev);
   };
 
   const assignOrderToStaff = async (
@@ -556,6 +568,7 @@ export const RestaurantProvider = ({ children }) => {
         clearCart,
         createOrder,
         updateOrderStatus,
+        deleteOrder,
         assignOrderToStaff,
         confirmOrderPayment,
         cancelOrder,

@@ -31,7 +31,7 @@ export const DeliveryDashboard = () => {
     (o) => o.status === 'Out for Delivery' || o.status === 'Preparing'
   );
 
-  const completedOrders = orders.filter((o) => o.status === 'Delivered');
+  const completedOrders = orders.filter((o) => ['Delivered', 'Received'].includes(o.status));
 
   const handleAdvanceStatus = async (order, nextStatus, label) => {
     try {

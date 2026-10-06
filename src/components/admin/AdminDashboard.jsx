@@ -40,6 +40,7 @@ const AdminDashboard = () => {
     toggleStock,
     assignOrderToStaff,
     confirmOrderPayment,
+    deleteOrder,
   } = useRestaurant();
 
 
@@ -509,6 +510,21 @@ const handleDeleteDelivery = async (id) => {
       showToast('Malipo yamethibitishwa kikamilifu.', 'success');
     } catch (error) {
       showToast(error.message || 'Imeshindikana kuthibitisha malipo.', 'error');
+    }
+  };
+
+  const handleDeleteReceivedOrder = async (order) => {
+    if (order.status !== 'Received') return;
+    if (!window.confirm(`Futa oda ${order.id} ya ${order.customerName}? Kitendo hiki hakiwezi kutenduliwa.`)) {
+      return;
+    }
+
+    try {
+      await deleteOrder(order.id);
+      setSelectedOrder(null);
+      showToast('Oda iliyopokelewa imefutwa.', 'success');
+    } catch (error) {
+      showToast(error.message || 'Imeshindikana kufuta oda.', 'error');
     }
   };
 
@@ -1678,6 +1694,16 @@ const handleDeleteDelivery = async (id) => {
                   className="w-full rounded-lg bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-800"
                 >
                   Thibitisha malipo ya simu
+                </button>
+              )}
+
+              {selectedOrder.status === 'Received' && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteReceivedOrder(selectedOrder)}
+                  className="w-full rounded-lg bg-red-600 px-4 py-3 font-semibold text-white hover:bg-red-700"
+                >
+                  Futa oda iliyopokelewa
                 </button>
               )}
 
