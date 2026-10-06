@@ -22,6 +22,7 @@ import {
   updateOrder as updateOrderRequest,
   assignOrder as assignOrderRequest,
   confirmOrderPayment as confirmOrderPaymentRequest,
+  rejectOrderPayment as rejectOrderPaymentRequest,
 } from '../API';
 import { useAuth } from './AuthContext';
 
@@ -425,6 +426,17 @@ export const RestaurantProvider = ({ children }) => {
     return updatedOrder;
   };
 
+  const rejectOrderPayment = async (orderId) => {
+    const updatedOrder = await rejectOrderPaymentRequest(orderId);
+    setOrdersState((prev) => prev.ownerKey === ownerKey
+      ? {
+          ...prev,
+          records: prev.records.map((order) => order.id === orderId ? updatedOrder : order),
+        }
+      : prev);
+    return updatedOrder;
+  };
+
   const cancelOrder = async (
     orderId
   ) => {
@@ -571,6 +583,7 @@ export const RestaurantProvider = ({ children }) => {
         deleteOrder,
         assignOrderToStaff,
         confirmOrderPayment,
+        rejectOrderPayment,
         cancelOrder,
         addMenuItem,
         updateMenuItem,

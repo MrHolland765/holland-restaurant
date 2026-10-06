@@ -109,6 +109,11 @@ export const confirmOrderPayment = (id) =>
     method: "PUT",
   });
 
+export const rejectOrderPayment = (id) =>
+  request(`/api/orders/${encodeURIComponent(id)}/payment-rejection`, {
+    method: "PUT",
+  });
+
 export const deleteOrder = (id) =>
   request(`/api/orders/${encodeURIComponent(id)}`, {
     method: "DELETE",

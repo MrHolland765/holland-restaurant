@@ -42,6 +42,7 @@ const AdminDashboard = () => {
     toggleStock,
     assignOrderToStaff,
     confirmOrderPayment,
+    rejectOrderPayment,
     deleteOrder,
   } = useRestaurant();
 
@@ -550,6 +551,21 @@ const handleDeleteCustomer = async (customer) => {
     }
   };
 
+  const handleRejectPayment = async (orderId) => {
+    const confirmed = window.confirm(
+      'Unakataa malipo haya? Oda hii haitaruhusiwa kuandaliwa au kupelekwa.'
+    );
+    if (!confirmed) return;
+
+    try {
+      const updated = await rejectOrderPayment(orderId);
+      setSelectedOrder(updated);
+      showToast('Malipo ya oda yamekataliwa.', 'success');
+    } catch (error) {
+      showToast(error.message || 'Imeshindikana kukataa malipo.', 'error');
+    }
+  };
+
   const handleDeleteReceivedOrder = async (order) => {
     if (order.status !== 'Received') return;
     if (!window.confirm(`Futa oda ${order.id} ya ${order.customerName}? Kitendo hiki hakiwezi kutenduliwa.`)) {
@@ -909,7 +925,9 @@ const handleDeleteCustomer = async (customer) => {
                       <span className={`rounded-full px-3 py-1 text-xs ${
                         order.paymentStatus === 'Paid'
                           ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-amber-100 text-amber-900'
+                          : order.paymentStatus === 'Rejected'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-amber-100 text-amber-900'
                       }`}>
                         {order.paymentStatus}
                       </span>
@@ -989,7 +1007,9 @@ const handleDeleteCustomer = async (customer) => {
                       <span className={`rounded-full px-3 py-1 text-xs ${
                         order.paymentStatus === 'Paid'
                           ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-amber-100 text-amber-900'
+                          : order.paymentStatus === 'Rejected'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-amber-100 text-amber-900'
                       }`}>
                         {order.paymentStatus}
                       </span>
@@ -1802,13 +1822,22 @@ const handleDeleteCustomer = async (customer) => {
               )}
 
               {['Pending Verification', 'Pending (Cash)'].includes(selectedOrder.paymentStatus) && (
-                <button
-                  type="button"
-                  onClick={() => handleConfirmPayment(selectedOrder.id)}
-                  className="w-full rounded-lg bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-800"
-                >
-                  Thibitisha malipo ya oda
-                </button>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => handleConfirmPayment(selectedOrder.id)}
+                    className="w-full rounded-lg bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-800"
+                  >
+                    Thibitisha malipo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRejectPayment(selectedOrder.id)}
+                    className="w-full rounded-lg border border-red-300 bg-white px-4 py-3 font-semibold text-red-700 hover:bg-red-50"
+                  >
+                    Kataa malipo
+                  </button>
+                </div>
               )}
 
               <div className="border-t pt-4">
