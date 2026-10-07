@@ -5,28 +5,62 @@ const API_URL = (
     : "https://holland-backend-icfe.onrender.com")
 ).replace(/\/+$/, "");
 
+const wait = (milliseconds) =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds));
+
 const request = async (path, options = {}) => {
+  const { retries = 0, ...fetchOptions } = options;
   const token = sessionStorage.getItem("holland_token");
 
-  const response = await fetch(`${API_URL}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token
-        ? { Authorization: `Bearer ${token}` }
-        : {}),
-      ...options.headers,
-    },
-    ...options,
-  });
+  let response;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      response = await fetch(`${API_URL}${path}`, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...fetchOptions.headers,
+        },
+        ...fetchOptions,
+      });
+    } catch (error) {
+      if (attempt >= retries) {
+        if (error instanceof TypeError) {
+          throw new Error(
+            "Imeshindikana kuwasiliana na seva. Hakikisha intaneti ipo kisha jaribu tena."
+          );
+        }
+        throw error;
+      }
 
-  const data =
-    response.status === 204
-      ? null
-      : await response.json();
+      await wait(1000 * 2 ** attempt);
+      continue;
+    }
+
+    if (![502, 503, 504].includes(response.status) || attempt >= retries) {
+      break;
+    }
+
+    await wait(1000 * 2 ** attempt);
+  }
+
+  let data = null;
+  if (response.status !== 204) {
+    try {
+      data = await response.json();
+    } catch {
+      if (!response.ok) {
+        throw new Error(
+          "Seva haipatikani kwa sasa. Tafadhali subiri kidogo kisha ujaribu tena."
+        );
+      }
+      throw new Error("Majibu ya seva hayajasomeka. Tafadhali jaribu tena.");
+    }
+  }
 
   if (!response.ok) {
     throw new Error(
-      data.message || "Ombi limeshindwa"
+      data?.message || "Ombi limeshindwa"
     );
   }
 
@@ -43,6 +77,7 @@ export const loginUser = async (email, password) => {
     headers: {
       "Content-Type": "application/json",
     },
+    retries: 3,
     body: JSON.stringify({
       email,
       password,

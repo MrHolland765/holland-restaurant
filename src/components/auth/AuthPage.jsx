@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -8,7 +8,7 @@ import {
   isStrongPassword,
   PASSWORD_REQUIREMENTS,
 } from '../../utils/passwordValidation';
-import { requestPasswordReset, resetPassword } from '../../API';
+import { requestPasswordReset, resetPassword, testBackend } from '../../API';
 
 export const AuthPage = ({ onComplete }) => {
   const { login, register } = useAuth();
@@ -28,6 +28,13 @@ export const AuthPage = ({ onComplete }) => {
   // Login form state
   const [loginIdentifier, setLoginIdentifier] = useState('');
 const [loginPassword, setLoginPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  useEffect(() => {
+    testBackend().catch((error) => {
+      console.warn('Backend warm-up failed:', error.message);
+    });
+  }, []);
 
   const handleRoleChange = (role) => {
     setSelectedRole(role);
@@ -106,35 +113,42 @@ const [loginPassword, setLoginPassword] = useState('');
   const handleLoginSubmit = async (e) => {
   e.preventDefault();
 
+  if (isLoggingIn) return;
+
   if (!loginIdentifier || !loginPassword) {
     showToast('Tafadhali jaza taarifa zote za kuingia', 'error');
     return;
   }
 
-  const result = await login(
-  loginIdentifier,
-  loginPassword,
-  selectedRole
-);
-
-  if (!result.success) {
-    showToast(
-      result.message || 'Email au password si sahihi',
-      'error'
+  setIsLoggingIn(true);
+  try {
+    const result = await login(
+      loginIdentifier,
+      loginPassword,
+      selectedRole
     );
-    return;
+
+    if (!result.success) {
+      showToast(
+        result.message || 'Email au password si sahihi',
+        'error'
+      );
+      return;
+    }
+
+    showToast(
+      isEnglish
+        ? 'Welcome to Holland Restaurant!'
+        : 'Karibu Holland Restaurant!',
+      'success'
+    );
+
+    if (onComplete) {
+      onComplete(result.user?.role);
+    }
+  } finally {
+    setIsLoggingIn(false);
   }
-
-  showToast(
-  isEnglish
-    ? 'Welcome to Holland Restaurant!'
-    : 'Karibu Holland Restaurant!',
-  'success'
-);
-
-if (onComplete) {
-  onComplete(result.user?.role);
-}
 };
 
   const handleRegisterSubmit = async (e) => {
@@ -322,10 +336,15 @@ if (onComplete) {
               {/* Sketch button: [Sign In] */}
               <button
                 type="submit"
+                disabled={isLoggingIn}
                 className="w-full mt-2 py-3.5 px-6 rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-[0.99] text-white font-bold text-base shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
               >
-                <span>Sign In</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>
+                  {isLoggingIn
+                    ? (isEnglish ? 'Connecting...' : 'Inaunganisha...')
+                    : (isEnglish ? 'Sign In' : 'Ingia')}
+                </span>
+                {!isLoggingIn && <ArrowRight className="w-4 h-4" />}
               </button>
 
               <div className="text-center">
