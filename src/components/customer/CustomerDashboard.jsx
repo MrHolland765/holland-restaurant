@@ -35,10 +35,15 @@ export const CustomerDashboard = () => {
       item.category.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+  const availableItemCount = filteredItems.filter((item) => item.inStock).length;
 
   const handleAddToCart = (item) => {
-    addToCart(item, 1);
-    showToast(`${item.name} imeongezwa kwenye Cart!`, 'success', 2500);
+    try {
+      addToCart(item, 1);
+      showToast(`${item.name} imeongezwa kwenye Cart!`, 'success', 2500);
+    } catch (error) {
+      showToast(error.message || 'Hii bidhaa haipatikani kwa sasa.', 'error', 3500);
+    }
   };
 
   const formatTsh = (val) => {
@@ -122,7 +127,7 @@ export const CustomerDashboard = () => {
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <p className="text-xs sm:text-sm font-semibold text-slate-500">
-            Vyakula vilivyopo ({filteredItems.length}):
+            Vinavyopatikana sasa: {availableItemCount} kati ya {filteredItems.length}
           </p>
           {searchQuery && (
             <button
@@ -180,8 +185,13 @@ export const CustomerDashboard = () => {
                   </div>
 
                   {!item.inStock && (
-                    <div className="absolute inset-0 bg-slate-950/65 flex items-center justify-center text-white text-xs font-black uppercase tracking-wider">
-                      Imekwisha (Out of stock)
+                    <div className="absolute inset-0 bg-slate-950/65 flex flex-col items-center justify-center gap-1 px-4 text-center text-white text-[10px] font-black uppercase tracking-wider">
+                      <span>Imekwisha (Out of stock)</span>
+                      {item.availabilityMessage && (
+                        <span className="normal-case text-[9px] tracking-normal font-medium">
+                          {item.availabilityMessage}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -192,6 +202,15 @@ export const CustomerDashboard = () => {
                     <h3 className="text-base font-bold text-slate-900 group-hover:text-amber-600 transition-colors leading-snug line-clamp-1">
                       {item.name}
                     </h3>
+                    <span
+                      className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                        item.inStock
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-red-100 text-red-700'
+                      }`}
+                    >
+                      {item.inStock ? 'Inapatikana sasa' : 'Haipatikani kwa sasa'}
+                    </span>
                     <p className="text-xs text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">
                       {item.description}
                     </p>
@@ -200,6 +219,12 @@ export const CustomerDashboard = () => {
                       <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
                         <Clock className="w-3.5 h-3.5" />
                         <span>Muda wa maandalizi: {item.prepTime}</span>
+                      </div>
+                    )}
+
+                    {!item.inStock && item.availabilityMessage && (
+                      <div className="mt-2.5 rounded-xl bg-amber-50 px-2.5 py-2 text-[11px] font-medium text-amber-800">
+                        {item.availabilityMessage}
                       </div>
                     )}
                   </div>

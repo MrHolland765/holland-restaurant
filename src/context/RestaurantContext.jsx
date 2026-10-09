@@ -31,42 +31,54 @@ const RestaurantContext = createContext(null);
 export const RestaurantProvider = ({ children }) => {
   const { currentUser, currentRole, isAuthenticated } = useAuth();
 
-  const formatProduct = (product) => ({
-    id: product.id,
-    name: product.name,
-    description: product.description || '',
-    price: Number(product.price),
+  const formatProduct = (product) => {
+    const isAvailable = Boolean(product.available ?? product.inStock);
+    const availableUntilRaw = product.available_until || product.availableUntil || null;
+    const availabilityMessage = product.availability_message || product.availabilityMessage || '';
 
-    image:
-      product.image === 'chicken-burger.jpg'
-        ? 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600'
-        : product.image === 'beef-pizza.jpg'
-          ? 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=600'
-          : product.image === 'chicken-chips.jpg'
-            ? 'https://images.unsplash.com/photo-1547592180-85f173990554?w=600'
-            : product.image === 'fresh-juice.jpg'
-              ? 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=600'
-              : product.image || '',
+    const availableUntil = availableUntilRaw
+      ? new Date(availableUntilRaw)
+      : null;
 
-    category: [
-      'Main Course',
-      'Burger',
-      'Pizza',
-    ].includes(product.category)
-      ? 'Foods'
-      : product.category || 'Foods',
+    const isFutureUnavailability = availableUntil && availableUntil.getTime() > Date.now();
 
-    rating: Number(product.rating || 5),
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description || '',
+      price: Number(product.price),
 
-    inStock: Boolean(
-      product.available ?? product.inStock
-    ),
+      image:
+        product.image === 'chicken-burger.jpg'
+          ? 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600'
+          : product.image === 'beef-pizza.jpg'
+            ? 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=600'
+            : product.image === 'chicken-chips.jpg'
+              ? 'https://images.unsplash.com/photo-1547592180-85f173990554?w=600'
+              : product.image === 'fresh-juice.jpg'
+                ? 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=600'
+                : product.image || '',
 
-    prepTime:
-      product.prep_time ||
-      product.prepTime ||
-      '15-20 min',
-  });
+      category: [
+        'Main Course',
+        'Burger',
+        'Pizza',
+      ].includes(product.category)
+        ? 'Foods'
+        : product.category || 'Foods',
+
+      rating: Number(product.rating || 5),
+
+      inStock: isAvailable && !isFutureUnavailability,
+      availableUntil,
+      availabilityMessage,
+
+      prepTime:
+        product.prep_time ||
+        product.prepTime ||
+        '15-20 min',
+    };
+  };
 
   const [menuItems, setMenuItems] = useState(() => {
     const saved = localStorage.getItem(
@@ -277,6 +289,11 @@ export const RestaurantProvider = ({ children }) => {
   );
 
   const addToCart = (item, qty = 1) => {
+    if (!item?.inStock) {
+      const pendingMessage = item?.availabilityMessage || 'Hii bidhaa haipatikani kwa sasa. Tafadhali subiri au wasiliana na admin.';
+      throw new Error(pendingMessage);
+    }
+
     setCart((prev) => {
       const existing = prev.find(
         (i) => i.id === item.id
@@ -465,7 +482,9 @@ export const RestaurantProvider = ({ children }) => {
     const product =
       await createProduct({
         ...item,
-        available: true,
+        available: Boolean(item.inStock ?? true),
+        availableUntil: item.availableUntil || null,
+        availabilityMessage: item.availabilityMessage || '',
       });
 
     const newItem =
@@ -501,6 +520,14 @@ export const RestaurantProvider = ({ children }) => {
           available:
             updatedFields.inStock ??
             existing.inStock,
+          availableUntil:
+            updatedFields.availableUntil ??
+            existing.availableUntil ??
+            null,
+          availabilityMessage:
+            updatedFields.availabilityMessage ??
+            existing.availabilityMessage ??
+            '',
         }
       );
 

@@ -106,6 +106,9 @@ const AdminDashboard = () => {
       image: '',
       prepTime: '15-20 min',
       inStock: true,
+      availableUntil: '',
+      availabilityNoteOption: 'available',
+      availabilityMessage: '',
     });
 
 
@@ -126,6 +129,22 @@ const AdminDashboard = () => {
     deliveryStaff,
     selectedStaffId,
   ]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const orderCode = params.get('orderCode');
+
+    if (!orderCode) return;
+
+    const matchedOrder = orders.find((item) => item.id === orderCode);
+    if (matchedOrder) {
+      setSelectedOrder(matchedOrder);
+    }
+
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete('orderCode');
+    window.history.replaceState({}, '', cleanUrl.toString());
+  }, [orders]);
 
 
   // ===============================
@@ -376,6 +395,9 @@ const handleDeleteCustomer = async (customer) => {
         'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80',
       prepTime: '15-20 min',
       inStock: true,
+      availableUntil: '',
+      availabilityNoteOption: 'available',
+      availabilityMessage: '',
     });
 
     setIsMenuModalOpen(true);
@@ -405,6 +427,22 @@ const handleDeleteCustomer = async (customer) => {
         '15-20 min',
       inStock:
         item.inStock ?? true,
+      availableUntil:
+        item.availableUntil
+          ? new Date(item.availableUntil).toISOString().slice(0, 16)
+          : '',
+      availabilityNoteOption:
+        item.availabilityMessage === 'Inapatikana sasa'
+          ? 'available'
+          : item.availabilityMessage === 'Haipatikani sasa'
+            ? 'unavailable'
+            : item.availabilityMessage
+              ? 'custom'
+              : item.inStock
+                ? 'available'
+                : 'unavailable',
+      availabilityMessage:
+        item.availabilityMessage || '',
     });
 
     setIsMenuModalOpen(true);
@@ -456,6 +494,12 @@ const handleDeleteCustomer = async (customer) => {
 
         inStock:
           menuForm.inStock,
+
+        availableUntil:
+          menuForm.availableUntil || null,
+
+        availabilityMessage:
+          menuForm.availabilityMessage || '',
       };
 
 
@@ -1689,15 +1733,19 @@ const handleDeleteCustomer = async (customer) => {
                   checked={
                     menuForm.inStock
                   }
-                  onChange={(e) =>
-                    setMenuForm(
-                      (prev) => ({
-                        ...prev,
-                        inStock:
-                          e.target.checked,
-                      })
-                    )
-                  }
+                  onChange={(e) => {
+                    const inStock = e.target.checked;
+                    setMenuForm((prev) => ({
+                      ...prev,
+                      inStock,
+                      ...(prev.availabilityNoteOption !== 'custom' && {
+                        availabilityNoteOption: inStock ? 'available' : 'unavailable',
+                        availabilityMessage: inStock
+                          ? 'Inapatikana sasa'
+                          : 'Haipatikani sasa',
+                      }),
+                    }));
+                  }}
                 />
 
                 <span>
@@ -1705,6 +1753,67 @@ const handleDeleteCustomer = async (customer) => {
                 </span>
 
               </label>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-slate-700">Availability date/time</label>
+                <input
+                  type="datetime-local"
+                  value={menuForm.availableUntil}
+                  onChange={(e) =>
+                    setMenuForm((prev) => ({
+                      ...prev,
+                      availableUntil: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-lg border px-4 py-3 outline-none"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-slate-700">Availability note</label>
+                <select
+                  value={menuForm.availabilityNoteOption}
+                  onChange={(e) => {
+                    const option = e.target.value;
+                    setMenuForm((prev) => ({
+                      ...prev,
+                      availabilityNoteOption: option,
+                      inStock: option === 'available'
+                        ? true
+                        : option === 'unavailable'
+                          ? false
+                          : prev.inStock,
+                      availabilityMessage: option === 'available'
+                        ? 'Inapatikana sasa'
+                        : option === 'unavailable'
+                          ? 'Haipatikani sasa'
+                          : prev.availabilityMessage === 'Inapatikana sasa' ||
+                              prev.availabilityMessage === 'Haipatikani sasa'
+                            ? ''
+                            : prev.availabilityMessage,
+                    }));
+                  }}
+                  className="w-full rounded-lg border px-4 py-3 outline-none"
+                >
+                  <option value="available">Inapatikana sasa</option>
+                  <option value="unavailable">Haipatikani sasa</option>
+                  <option value="custom">Andika taarifa mwenyewe</option>
+                </select>
+                {menuForm.availabilityNoteOption === 'custom' && (
+                  <input
+                    type="text"
+                    placeholder="Andika taarifa kwa mteja"
+                    value={menuForm.availabilityMessage}
+                    onChange={(e) =>
+                      setMenuForm((prev) => ({
+                        ...prev,
+                        availabilityMessage: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-lg border px-4 py-3 outline-none"
+                  />
+                )}
+              </div>
 
 
               <button
